@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinanceApp Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f13; color: #e8e8f0; display: flex; gap: 24px; padding: 24px; min-height: 100vh; }
+
+  .phone { width: 375px; min-width: 375px; background: #16161e; border-radius: 40px; overflow: hidden; border: 1.5px solid #2a2a3a; box-shadow: 0 32px 80px rgba(0,0,0,0.6); }
+  .phone-screen { overflow-y: auto; height: 780px; }
+
+  .status-bar { padding: 14px 24px 8px; display: flex; justify-content: space-between; font-size: 12px; color: #666; }
+  .screen { padding: 0 0 80px; display: none; }
+  .screen.active { display: block; }
+
+  /* Header */
+  .header { padding: 16px 20px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  .header .sub { font-size: 13px; color: #666; margin-top: 2px; }
+  .avatar { width: 36px; height: 36px; border-radius: 18px; background: linear-gradient(135deg, #6c63ff, #48d1cc); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+
+  /* Month selector */
+  .month-selector { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 8px 20px 16px; }
+  .month-selector .chevron { color: #6c63ff; font-size: 18px; cursor: pointer; padding: 4px 8px; }
+  .month-selector .month { font-size: 16px; font-weight: 600; color: #fff; }
+
+  /* Cards */
+  .card { background: #1e1e2e; border-radius: 16px; margin: 0 16px 12px; padding: 16px; border: 1px solid #2a2a3a; }
+  .card-row { display: flex; justify-content: space-between; align-items: center; }
+  .card-label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .card-value { font-size: 24px; font-weight: 700; color: #fff; }
+  .card-value.income { color: #4ade80; }
+  .card-value.negative { color: #f87171; }
+
+  /* Summary pills */
+  .summary-pills { display: flex; gap: 8px; padding: 0 16px 12px; }
+  .pill { flex: 1; background: #1e1e2e; border-radius: 12px; padding: 12px 10px; text-align: center; border: 1px solid #2a2a3a; }
+  .pill-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .pill-value { font-size: 15px; font-weight: 700; }
+  .pill-value.needs { color: #60a5fa; }
+  .pill-value.wants { color: #f472b6; }
+  .pill-value.savings { color: #4ade80; }
+
+  /* Alert */
+  .alert { margin: 0 16px 12px; background: #2a1f3a; border: 1px solid #6c63ff44; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .alert-dot { width: 8px; height: 8px; border-radius: 4px; background: #6c63ff; flex-shrink: 0; }
+  .alert-text { font-size: 13px; color: #c4b5fd; }
+  .alert-badge { margin-left: auto; background: #6c63ff; color: white; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 2px 8px; }
+
+  /* Section title */
+  .section-title { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 20px 10px; }
+
+  /* Recent transactions */
+  .txn-item { display: flex; align-items: center; gap: 12px; padding: 10px 20px; }
+  .txn-icon { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .txn-info { flex: 1; }
+  .txn-name { font-size: 14px; font-weight: 500; color: #e8e8f0; }
+  .txn-cat { font-size: 12px; color: #666; margin-top: 1px; }
+  .txn-amount { font-size: 14px; font-weight: 600; }
+  .txn-amount.debit { color: #f87171; }
+  .txn-amount.credit { color: #4ade80; }
+
+  /* Bottom nav */
+  .bottom-nav { position: sticky; bottom: 0; background: #16161e; border-top: 1px solid #2a2a3a; display: flex; padding: 8px 0 20px; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 6px 0; opacity: 0.5; transition: opacity 0.15s; }
+  .nav-item.active { opacity: 1; }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 10px; color: #888; }
+  .nav-item.active .nav-label { color: #6c63ff; }
+
+  /* Progress bars */
+  .goal-row { margin-bottom: 14px; }
+  .goal-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .goal-name { font-size: 13px; font-weight: 500; color: #ccc; }
+  .goal-amounts { font-size: 12px; color: #666; }
+  .goal-amounts span { color: #e8e8f0; font-weight: 600; }
+  .progress-track { height: 6px; background: #2a2a3a; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .progress-fill.needs { background: #60a5fa; }
+  .progress-fill.wants { background: #f472b6; }
+  .progress-fill.savings { background: #4ade80; }
+  .progress-fill.over { background: #f87171; }
+  .goal-status { font-size: 11px; margin-top: 4px; }
+  .goal-status.on-track { color: #4ade80; }
+  .goal-status.over { color: #f87171; }
+  .goal-status.under { color: #facc15; }
+
+  /* Category breakdown */
+  .cat-row { display: flex; align-items: center; gap: 12px; padding: 10px 20px; cursor: pointer; }
+  .cat-row:active { background: #1e1e2e; }
+  .cat-dot { width: 10px; height: 10px; border-radius: 5px; flex-shrink: 0; }
+  .cat-name { flex: 1; font-size: 14px; color: #e8e8f0; }
+  .cat-bar-wrap { width: 80px; height: 4px; background: #2a2a3a; border-radius: 2px; }
+  .cat-bar { height: 4px; border-radius: 2px; }
+  .cat-amount { font-size: 14px; font-weight: 600; color: #e8e8f0; min-width: 60px; text-align: right; }
+
+  /* Meta group */
+  .meta-group { margin-bottom: 4px; }
+  .meta-header { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px 4px; }
+  .meta-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+  .meta-label.needs { color: #60a5fa; }
+  .meta-label.wants { color: #f472b6; }
+  .meta-label.savings { color: #4ade80; }
+  .meta-total { font-size: 12px; color: #888; }
+
+  /* Forecast */
+  .forecast-tier { background: #1e1e2e; border-radius: 14px; margin: 0 16px 10px; padding: 14px 16px; border: 1px solid #2a2a3a; }
+  .forecast-tier.highlight { border-color: #6c63ff44; background: #1e1e2e; }
+  .tier-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .tier-name { font-size: 13px; font-weight: 600; color: #ccc; }
+  .tier-name.goal-label { color: #6c63ff; }
+  .tier-amount { font-size: 20px; font-weight: 700; color: #fff; }
+  .tier-sub { font-size: 12px; color: #666; }
+  .tier-badge { font-size: 11px; padding: 2px 8px; border-radius: 8px; font-weight: 600; }
+  .tier-badge.on-track { background: #14532d; color: #4ade80; }
+  .tier-badge.behind { background: #450a0a; color: #f87171; }
+  .tier-badge.stretch { background: #1e1b4b; color: #a5b4fc; }
+
+  .trend-callout { background: #1a1a2e; border-radius: 10px; margin: 0 16px 10px; padding: 12px 14px; border-left: 3px solid #6c63ff; }
+  .trend-text { font-size: 13px; color: #c4b5fd; line-height: 1.5; }
+
+  /* Transactions screen */
+  .search-bar { margin: 0 16px 12px; background: #1e1e2e; border-radius: 12px; padding: 10px 14px; display: flex; gap: 8px; align-items: center; border: 1px solid #2a2a3a; }
+  .search-bar input { background: none; border: none; outline: none; color: #e8e8f0; font-size: 14px; flex: 1; }
+  .search-bar .icon { color: #555; font-size: 14px; }
+  .filter-chips { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; }
+  .chip { background: #1e1e2e; border: 1px solid #2a2a3a; border-radius: 20px; padding: 6px 12px; font-size: 12px; color: #888; white-space: nowrap; }
+  .chip.active { background: #2d2b4e; border-color: #6c63ff; color: #a5b4fc; }
+
+  .txn-full { padding: 10px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #1e1e2e; }
+  .txn-full-info { flex: 1; }
+  .txn-full-name { font-size: 14px; font-weight: 500; color: #e8e8f0; }
+  .txn-full-meta { font-size: 12px; color: #555; margin-top: 2px; }
+  .txn-cat-pill { font-size: 11px; padding: 2px 8px; border-radius: 8px; margin-top: 4px; display: inline-block; }
+  .edit-btn { font-size: 18px; color: #444; padding: 4px; }
+
+  .divider { height: 1px; background: #2a2a3a; margin: 4px 20px; }
+
+  /* Annotation labels */
+  .label { position: absolute; background: #6c63ff; color: white; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- SCREEN SWITCHER -->
+<div style="display:flex; flex-direction:column; gap:10px; padding-top:60px;">
+  <div style="font-size:11px; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Screens</div>
+  <button onclick="showScreen('dashboard')" id="btn-dashboard" style="background:#2d2b4e; color:#a5b4fc; border:1px solid #6c63ff; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;">Dashboard</button>
+  <button onclick="showScreen('spending')" id="btn-spending" style="background:#1e1e2e; color:#888; border:1px solid #2a2a3a; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;">Spending</button>
+  <button onclick="showScreen('forecast')" id="btn-forecast" style="background:#1e1e2e; color:#888; border:1px solid #2a2a3a; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;">Forecast</button>
+  <button onclick="showScreen('transactions')" id="btn-transactions" style="background:#1e1e2e; color:#888; border:1px solid #2a2a3a; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;">Transactions</button>
+  <div style="height:1px; background:#2a2a3a; margin:4px 0;"></div>
+  <button onclick="showScreen('review')" id="btn-review" style="background:#1e1e2e; color:#888; border:1px solid #2a2a3a; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;">Review Queue</button>
+  <button onclick="showScreen('categorise')" id="btn-categorise" style="background:#1e1e2e; color:#888; border:1px solid #2a2a3a; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; text-align:left;">Category Edit</button>
+</div>
+
+<div class="phone">
+  <div class="phone-screen" id="phone-screen">
+    <div class="status-bar"><span>9:41</span><span>●●●●</span></div>
+
+    <!-- DASHBOARD -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="header">
+        <div>
+          <div class="header h1" style="font-size:22px; font-weight:700; color:#fff;">Good morning, Ryan</div>
+          <div class="sub" style="font-size:13px; color:#666; margin-top:2px;">May 2026</div>
+        </div>
+        <div class="avatar">R</div>
+      </div>
+
+      <div class="month-selector">
+        <span class="chevron">‹</span>
+        <span class="month">May 2026</span>
+        <span class="chevron">›</span>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Income this month</div>
+        <div class="card-value income">£3,200.00</div>
+        <div style="font-size:12px; color:#666; margin-top:6px;">NatWest Current · 1 May</div>
+      </div>
+
+      <div class="summary-pills">
+        <!-- Needs: 1248/1280 = 97.5% → amber (≥50% and not over) -->
+        <div class="pill" style="background:#2d2208; border-color:#5a3e0a;">
+          <div class="pill-label" style="color:#a07830;">Needs</div>
+          <div class="pill-value needs" style="color:#fbbf24;">£1,248</div>
+          <div style="font-size:10px; color:#7a5a20; margin-top:2px;">of £1,280</div>
+        </div>
+        <!-- Wants: 512/640 = 80% → amber (≥50% and not over) -->
+        <div class="pill" style="background:#2d2208; border-color:#5a3e0a;">
+          <div class="pill-label" style="color:#a07830;">Wants</div>
+          <div class="pill-value wants" style="color:#fbbf24;">£512</div>
+          <div style="font-size:10px; color:#7a5a20; margin-top:2px;">of £640</div>
+        </div>
+        <!-- Savings: 450/1280 = 35% → red (<50% of goal) -->
+        <div class="pill" style="background:#2d0a0a; border-color:#5a1010;">
+          <div class="pill-label" style="color:#a03030;">Savings</div>
+          <div class="pill-value savings" style="color:#f87171;">£450</div>
+          <div style="font-size:10px; color:#7a2020; margin-top:2px;">of £1,280</div>
+        </div>
+      </div>
+
+      <div class="alert">
+        <div class="alert-dot"></div>
+        <div class="alert-text">Transactions need review</div>
+        <div class="alert-badge">7</div>
+      </div>
+
+      <div class="section-title">Recent Transactions</div>
+
+      <div class="txn-item">
+        <div class="txn-icon" style="background:#1a3a1a;">🛒</div>
+        <div class="txn-info">
+          <div class="txn-name">Tesco Superstore</div>
+          <div class="txn-cat">Groceries · NatWest</div>
+        </div>
+        <div class="txn-amount debit">−£67.42</div>
+      </div>
+      <div class="txn-item">
+        <div class="txn-icon" style="background:#1a1a3a;">☕</div>
+        <div class="txn-info">
+          <div class="txn-name">Pret A Manger</div>
+          <div class="txn-cat">Eating Out · Halifax</div>
+        </div>
+        <div class="txn-amount debit">−£8.50</div>
+      </div>
+      <div class="txn-item">
+        <div class="txn-icon" style="background:#1a2a3a;">⛽</div>
+        <div class="txn-info">
+          <div class="txn-name">Tesco Petrol</div>
+          <div class="txn-cat">Fuel · NatWest</div>
+        </div>
+        <div class="txn-amount debit">−£54.00</div>
+      </div>
+      <div class="txn-item">
+        <div class="txn-icon" style="background:#2a1a3a;">🎵</div>
+        <div class="txn-info">
+          <div class="txn-name">Spotify</div>
+          <div class="txn-cat">Subscriptions · Halifax</div>
+        </div>
+        <div class="txn-amount debit">−£11.99</div>
+      </div>
+      <div class="txn-item">
+        <div class="txn-icon" style="background:#1a3a2a;">💰</div>
+        <div class="txn-info">
+          <div class="txn-name">Regular Saver Transfer</div>
+          <div class="txn-cat">Savings · NatWest</div>
+        </div>
+        <div class="txn-amount debit">−£150.00</div>
+      </div>
+    </div>
+
+    <!-- SPENDING -->
+    <div class="screen" id="screen-spending">
+      <div class="header">
+        <div>
+          <div style="font-size:22px; font-weight:700; color:#fff;">Spending</div>
+        </div>
+      </div>
+
+      <div class="month-selector">
+        <span class="chevron">‹</span>
+        <span class="month">May 2026</span>
+        <span class="chevron">›</span>
+      </div>
+
+      <div class="card">
+        <div style="margin-bottom:14px;">
+          <div class="goal-row">
+            <div class="goal-header">
+              <span class="goal-name">Needs</span>
+              <span class="goal-amounts"><span>£1,248</span> of £1,280 goal</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill needs" style="width:97%"></div></div>
+            <div class="goal-status on-track">On track — £32 remaining</div>
+          </div>
+          <div class="goal-row">
+            <div class="goal-header">
+              <span class="goal-name">Wants</span>
+              <span class="goal-amounts"><span>£512</span> of £640 goal</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill wants" style="width:80%"></div></div>
+            <div class="goal-status on-track">On track — £128 remaining</div>
+          </div>
+          <div class="goal-row" style="margin-bottom:0">
+            <div class="goal-header">
+              <span class="goal-name">Savings</span>
+              <span class="goal-amounts"><span>£450</span> of £1,280 goal</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill savings" style="width:35%"></div></div>
+            <div class="goal-status under">Behind — £830 remaining</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">By Category</div>
+
+      <div class="meta-group">
+        <div class="meta-header">
+          <span class="meta-label needs">Needs · £1,248</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#60a5fa;"></div>
+          <span class="cat-name">Groceries</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:85%; background:#60a5fa;"></div></div>
+          <span class="cat-amount">£421.30</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#93c5fd;"></div>
+          <span class="cat-name">Bills & Utilities</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:60%; background:#93c5fd;"></div></div>
+          <span class="cat-amount">£312.00</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#bfdbfe;"></div>
+          <span class="cat-name">Transport</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:40%; background:#bfdbfe;"></div></div>
+          <span class="cat-amount">£198.50</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#dbeafe;"></div>
+          <span class="cat-name">Fuel</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:35%; background:#dbeafe;"></div></div>
+          <span class="cat-amount">£162.00</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#eff6ff;"></div>
+          <span class="cat-name">Health</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:12%; background:#eff6ff;"></div></div>
+          <span class="cat-amount">£54.20</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="meta-group">
+        <div class="meta-header">
+          <span class="meta-label wants">Wants · £512</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#f472b6;"></div>
+          <span class="cat-name">Eating Out</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:70%; background:#f472b6;"></div></div>
+          <span class="cat-amount">£187.50</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#f9a8d4;"></div>
+          <span class="cat-name">Shopping</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:50%; background:#f9a8d4;"></div></div>
+          <span class="cat-amount">£142.00</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#fbcfe8;"></div>
+          <span class="cat-name">Subscriptions</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:30%; background:#fbcfe8;"></div></div>
+          <span class="cat-amount">£97.50</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#fce7f3;"></div>
+          <span class="cat-name">Entertainment</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:20%; background:#fce7f3;"></div></div>
+          <span class="cat-amount">£85.00</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="meta-group">
+        <div class="meta-header">
+          <span class="meta-label savings">Savings · £450</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#4ade80;"></div>
+          <span class="cat-name">Regular Saver</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:55%; background:#4ade80;"></div></div>
+          <span class="cat-amount">£150.00</span>
+        </div>
+        <div class="cat-row">
+          <div class="cat-dot" style="background:#86efac;"></div>
+          <span class="cat-name">Monzo Savings</span>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:45%; background:#86efac;"></div></div>
+          <span class="cat-amount">£300.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORECAST -->
+    <div class="screen" id="screen-forecast">
+      <div class="header">
+        <div style="font-size:22px; font-weight:700; color:#fff;">Savings Forecast</div>
+      </div>
+
+      <div style="padding: 0 20px 14px; font-size:13px; color:#666;">Based on 6-month average · May 2026</div>
+
+      <div class="forecast-tier" style="border-color:#6c63ff66; margin-bottom:6px;">
+        <div class="tier-header">
+          <span class="tier-name goal-label">Goal (40% of income)</span>
+        </div>
+        <div class="tier-amount">£1,280.00 / month</div>
+        <div class="tier-sub" style="margin-top:4px;">£15,360 projected annually</div>
+      </div>
+
+      <div class="forecast-tier">
+        <div class="tier-header">
+          <span class="tier-name">Realistic</span>
+          <span class="tier-badge behind">£380 behind goal</span>
+        </div>
+        <div class="tier-amount">£900.00 / month</div>
+        <div class="tier-sub" style="margin-top:4px;">£10,800 projected annually · based on trends</div>
+      </div>
+
+      <div class="forecast-tier">
+        <div class="tier-header">
+          <span class="tier-name">Stretch (Wants −30%)</span>
+          <span class="tier-badge stretch">£92 behind goal</span>
+        </div>
+        <div class="tier-amount">£1,188.00 / month</div>
+        <div class="tier-sub" style="margin-top:4px;">£14,256 projected annually</div>
+      </div>
+
+      <div class="forecast-tier">
+        <div class="tier-header">
+          <span class="tier-name">Actual (this month)</span>
+          <span class="tier-badge behind">£830 behind goal</span>
+        </div>
+        <div class="tier-amount">£450.00 / month</div>
+        <div class="tier-sub" style="margin-top:4px;">£5,400 projected at this rate</div>
+      </div>
+
+      <div class="section-title" style="margin-top:8px;">Spending Trends</div>
+
+      <div class="trend-callout">
+        <div class="trend-text">📊 You spend ~£421/month on Groceries consistently over 6 months</div>
+      </div>
+      <div class="trend-callout">
+        <div class="trend-text">📉 Eating Out has increased 18% over the last 3 months (£158 → £187)</div>
+      </div>
+      <div class="trend-callout">
+        <div class="trend-text">✅ Bills & Utilities are stable at ~£312/month</div>
+      </div>
+      <div class="trend-callout">
+        <div class="trend-text">💡 Reducing Eating Out to your 3-month average would save ~£86/month</div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div class="screen" id="screen-transactions">
+      <div class="header">
+        <div style="font-size:22px; font-weight:700; color:#fff;">Transactions</div>
+      </div>
+
+      <div class="search-bar">
+        <span class="icon">🔍</span>
+        <input placeholder="Search transactions..." readonly>
+      </div>
+
+      <div class="filter-chips">
+        <div class="chip active">All accounts</div>
+        <div class="chip">NatWest</div>
+        <div class="chip">Halifax</div>
+        <div class="chip">Monzo</div>
+        <div class="chip">Needs</div>
+        <div class="chip">Wants</div>
+        <div class="chip">Savings</div>
+      </div>
+
+      <div style="padding: 4px 20px 8px; font-size:12px; color:#555;">31 May 2026</div>
+
+      <div class="txn-full">
+        <div class="txn-icon" style="background:#1a3a1a; font-size:16px;">🛒</div>
+        <div class="txn-full-info">
+          <div class="txn-full-name">Tesco Superstore</div>
+          <div class="txn-full-meta">NatWest · rule matched</div>
+          <span class="txn-cat-pill" style="background:#1a3a1a; color:#86efac;">Groceries</span>
+        </div>
+        <div>
+          <div class="txn-amount debit" style="text-align:right;">−£67.42</div>
+        </div>
+        <div class="edit-btn">›</div>
+      </div>
+
+      <div class="txn-full">
+        <div class="txn-icon" style="background:#1a1a3a; font-size:16px;">⛽</div>
+        <div class="txn-full-info">
+          <div class="txn-full-name">Tesco — Petrol Forecourt</div>
+          <div class="txn-full-meta">NatWest · rule matched (description)</div>
+          <span class="txn-cat-pill" style="background:#1a2a3a; color:#93c5fd;">Fuel</span>
+        </div>
+        <div>
+          <div class="txn-amount debit" style="text-align:right;">−£54.00</div>
+        </div>
+        <div class="edit-btn">›</div>
+      </div>
+
+      <div style="padding: 12px 20px 8px; font-size:12px; color:#555;">29 May 2026</div>
+
+      <div class="txn-full" style="background:#1e1e2e44;">
+        <div class="txn-icon" style="background:#2a1a1a; font-size:16px;">❓</div>
+        <div class="txn-full-info">
+          <div class="txn-full-name">AMAZON MKTPLACE</div>
+          <div class="txn-full-meta">Halifax · AI suggestion</div>
+          <span class="txn-cat-pill" style="background:#2a1a3a; color:#c084fc;">Shopping ✎</span>
+        </div>
+        <div>
+          <div class="txn-amount debit" style="text-align:right;">−£34.99</div>
+        </div>
+        <div class="edit-btn" style="color:#6c63ff;">›</div>
+      </div>
+
+      <div class="txn-full">
+        <div class="txn-icon" style="background:#2a1f3a; font-size:16px;">🎵</div>
+        <div class="txn-full-info">
+          <div class="txn-full-name">Spotify</div>
+          <div class="txn-full-meta">Halifax · rule matched</div>
+          <span class="txn-cat-pill" style="background:#2a1a3a; color:#c084fc;">Subscriptions</span>
+        </div>
+        <div>
+          <div class="txn-amount debit" style="text-align:right;">−£11.99</div>
+        </div>
+        <div class="edit-btn">›</div>
+      </div>
+
+      <div style="padding: 12px 20px 8px; font-size:12px; color:#555;">1 May 2026</div>
+
+      <div class="txn-full">
+        <div class="txn-icon" style="background:#1a3a2a; font-size:16px;">💰</div>
+        <div class="txn-full-info">
+          <div class="txn-full-name">Transfer — NatWest Saver</div>
+          <div class="txn-full-meta">NatWest · savings destination</div>
+          <span class="txn-cat-pill" style="background:#1a3a2a; color:#4ade80;">Savings</span>
+        </div>
+        <div>
+          <div class="txn-amount debit" style="text-align:right;">−£150.00</div>
+        </div>
+        <div class="edit-btn">›</div>
+      </div>
+
+      <div class="txn-full">
+        <div class="txn-icon" style="background:#1a3a2a; font-size:16px;">💚</div>
+        <div class="txn-full-info">
+          <div class="txn-full-name">Monzo Spending Money</div>
+          <div class="txn-full-meta">Monzo · savings destination</div>
+          <span class="txn-cat-pill" style="background:#1a3a2a; color:#4ade80;">Savings</span>
+        </div>
+        <div>
+          <div class="txn-amount debit" style="text-align:right;">−£300.00</div>
+        </div>
+        <div class="edit-btn">›</div>
+      </div>
+    </div>
+
+    <!-- REVIEW QUEUE -->
+    <div class="screen" id="screen-review">
+      <div class="header">
+        <div>
+          <div style="font-size:22px; font-weight:700; color:#fff;">Review</div>
+          <div style="font-size:13px; color:#666; margin-top:2px;">7 transactions need a category</div>
+        </div>
+        <div style="background:#2d2b4e; border:1px solid #6c63ff; border-radius:10px; padding:4px 10px; font-size:12px; color:#a5b4fc;">Confirm All</div>
+      </div>
+
+      <!-- Review item 1: needs confirmation -->
+      <div style="margin:0 16px 10px; background:#1e1e2e; border:1px solid #6c63ff44; border-radius:14px; padding:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div class="txn-icon" style="background:#2a1a1a; font-size:16px; width:36px; height:36px;">❓</div>
+            <div>
+              <div style="font-size:14px; font-weight:600; color:#fff;">AMAZON MKTPLACE</div>
+              <div style="font-size:12px; color:#555; margin-top:1px;">29 May · Halifax · −£34.99</div>
+            </div>
+          </div>
+          <div style="font-size:11px; color:#555; background:#2a2a3a; border-radius:6px; padding:2px 7px;">AI</div>
+        </div>
+        <div style="font-size:12px; color:#888; margin-bottom:8px;">Suggested category:</div>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+          <span style="background:#2a1a3a; color:#c084fc; font-size:13px; font-weight:600; padding:4px 12px; border-radius:8px;">Shopping</span>
+          <span style="font-size:12px; color:#555;">Wants</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div onclick="confirmTxn(this)" style="flex:1; background:#14532d; color:#4ade80; border-radius:10px; padding:8px; text-align:center; font-size:13px; font-weight:600; cursor:pointer;">✓ Confirm</div>
+          <div onclick="showCategorise()" style="flex:1; background:#2a2a3a; color:#ccc; border-radius:10px; padding:8px; text-align:center; font-size:13px; cursor:pointer;">Change</div>
+        </div>
+      </div>
+
+      <!-- Review item 2 -->
+      <div style="margin:0 16px 10px; background:#1e1e2e; border:1px solid #2a2a3a; border-radius:14px; padding:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div class="txn-icon" style="background:#1a2a1a; font-size:16px; width:36px; height:36px;">🍔</div>
+            <div>
+              <div style="font-size:14px; font-weight:600; color:#fff;">MCDONALD'S</div>
+              <div style="font-size:12px; color:#555; margin-top:1px;">28 May · Monzo · −£9.49</div>
+            </div>
+          </div>
+          <div style="font-size:11px; color:#555; background:#2a2a3a; border-radius:6px; padding:2px 7px;">AI</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+          <span style="background:#2a1a2a; color:#f9a8d4; font-size:13px; font-weight:600; padding:4px 12px; border-radius:8px;">Eating Out</span>
+          <span style="font-size:12px; color:#555;">Wants</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div onclick="confirmTxn(this)" style="flex:1; background:#14532d; color:#4ade80; border-radius:10px; padding:8px; text-align:center; font-size:13px; font-weight:600; cursor:pointer;">✓ Confirm</div>
+          <div onclick="showCategorise()" style="flex:1; background:#2a2a3a; color:#ccc; border-radius:10px; padding:8px; text-align:center; font-size:13px; cursor:pointer;">Change</div>
+        </div>
+      </div>
+
+      <!-- Review item 3 -->
+      <div style="margin:0 16px 10px; background:#1e1e2e; border:1px solid #2a2a3a; border-radius:14px; padding:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div class="txn-icon" style="background:#1a1a3a; font-size:16px; width:36px; height:36px;">💊</div>
+            <div>
+              <div style="font-size:14px; font-weight:600; color:#fff;">BOOTS</div>
+              <div style="font-size:12px; color:#555; margin-top:1px;">27 May · Halifax · −£18.75</div>
+            </div>
+          </div>
+          <div style="font-size:11px; color:#555; background:#2a2a3a; border-radius:6px; padding:2px 7px;">AI</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+          <span style="background:#1a2a3a; color:#93c5fd; font-size:13px; font-weight:600; padding:4px 12px; border-radius:8px;">Health</span>
+          <span style="font-size:12px; color:#555;">Needs</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div onclick="confirmTxn(this)" style="flex:1; background:#14532d; color:#4ade80; border-radius:10px; padding:8px; text-align:center; font-size:13px; font-weight:600; cursor:pointer;">✓ Confirm</div>
+          <div onclick="showCategorise()" style="flex:1; background:#2a2a3a; color:#ccc; border-radius:10px; padding:8px; text-align:center; font-size:13px; cursor:pointer;">Change</div>
+        </div>
+      </div>
+
+      <!-- Review item 4 — already confirmed, collapsed -->
+      <div style="margin:0 16px 10px; background:#141a14; border:1px solid #1a3a1a; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; opacity:0.6;">
+        <div style="width:20px; height:20px; border-radius:10px; background:#14532d; display:flex; align-items:center; justify-content:center; font-size:11px; color:#4ade80; flex-shrink:0;">✓</div>
+        <div style="flex:1;">
+          <span style="font-size:13px; color:#ccc;">DELIVEROO</span>
+          <span style="font-size:12px; color:#555; margin-left:8px;">−£22.50</span>
+        </div>
+        <span style="background:#2a1a2a; color:#f9a8d4; font-size:11px; padding:2px 8px; border-radius:6px;">Eating Out</span>
+      </div>
+
+      <div style="padding:8px 20px; font-size:12px; color:#555; text-align:center;">+ 3 more to review</div>
+    </div>
+
+    <!-- CATEGORY EDIT (bottom sheet simulation) -->
+    <div class="screen" id="screen-categorise">
+      <!-- Transaction context bar -->
+      <div style="background:#1e1e2e; border-bottom:1px solid #2a2a3a; padding:14px 20px;">
+        <div style="font-size:12px; color:#666; margin-bottom:4px;">Changing category for</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:15px; font-weight:600; color:#fff;">AMAZON MKTPLACE</div>
+          <div style="font-size:15px; font-weight:600; color:#f87171;">−£34.99</div>
+        </div>
+        <div style="font-size:12px; color:#555; margin-top:2px;">29 May · Halifax</div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-bar" style="margin-top:12px;">
+        <span class="icon">🔍</span>
+        <input placeholder="Search categories..." readonly>
+      </div>
+
+      <!-- Needs group -->
+      <div style="padding:6px 20px 4px; font-size:11px; font-weight:700; color:#60a5fa; text-transform:uppercase; letter-spacing:0.6px;">Needs</div>
+      <div onclick="selectCat(this,'Groceries','#1a3a1a','#86efac')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer; border-radius:0;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#60a5fa; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Groceries</span>
+      </div>
+      <div onclick="selectCat(this,'Transport','#1a2a3a','#bfdbfe')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#bfdbfe; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Transport</span>
+      </div>
+      <div onclick="selectCat(this,'Fuel','#1a2030','#dbeafe')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#dbeafe; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Fuel</span>
+      </div>
+      <div onclick="selectCat(this,'Bills & Utilities','#1a1a2e','#93c5fd')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#93c5fd; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Bills &amp; Utilities</span>
+      </div>
+      <div onclick="selectCat(this,'Health','#1a1a2a','#a5f3fc')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#a5f3fc; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Health</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Wants group -->
+      <div style="padding:6px 20px 4px; font-size:11px; font-weight:700; color:#f472b6; text-transform:uppercase; letter-spacing:0.6px;">Wants</div>
+      <div onclick="selectCat(this,'Eating Out','#2a1a2a','#f9a8d4')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#f472b6; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Eating Out</span>
+      </div>
+      <!-- Shopping — currently selected -->
+      <div id="cat-shopping" onclick="selectCat(this,'Shopping','#2a1a3a','#c084fc')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer; background:#2d2b4e; border-radius:10px; margin:0 12px;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#c084fc; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0; font-weight:600;">Shopping</span>
+        <span style="font-size:14px; color:#6c63ff;">✓</span>
+      </div>
+      <div onclick="selectCat(this,'Subscriptions','#2a1a3a','#c084fc')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#fbcfe8; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Subscriptions</span>
+      </div>
+      <div onclick="selectCat(this,'Entertainment','#2a1a2a','#fce7f3')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#fce7f3; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Entertainment</span>
+      </div>
+      <div onclick="selectCat(this,'Travel','#1a2a2a','#99f6e4')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#99f6e4; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Travel</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Savings group -->
+      <div style="padding:6px 20px 4px; font-size:11px; font-weight:700; color:#4ade80; text-transform:uppercase; letter-spacing:0.6px;">Savings</div>
+      <div onclick="selectCat(this,'Savings','#1a3a2a','#4ade80')" style="display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer;">
+        <div style="width:10px; height:10px; border-radius:5px; background:#4ade80; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:14px; color:#e8e8f0;">Savings</span>
+      </div>
+
+      <!-- Save button + rule toggle -->
+      <div style="position:sticky; bottom:0; background:#16161e; border-top:1px solid #2a2a3a; padding:12px 16px 28px;">
+        <div id="rule-prompt" style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding:10px 12px; background:#1e1e2e; border-radius:10px; border:1px solid #2a2a3a;">
+          <div style="flex:1; font-size:12px; color:#888;">Save rule: always categorise <span style="color:#c4b5fd;">AMAZON</span> as Shopping?</div>
+          <div style="display:flex; gap:6px;">
+            <div style="background:#14532d; color:#4ade80; font-size:11px; font-weight:700; padding:4px 10px; border-radius:6px; cursor:pointer;">Yes</div>
+            <div style="background:#2a2a3a; color:#888; font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;">No</div>
+          </div>
+        </div>
+        <div style="background:#6c63ff; color:white; border-radius:12px; padding:13px; text-align:center; font-size:15px; font-weight:700; cursor:pointer;">Save</div>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+      <div class="nav-item active" id="nav-dashboard" onclick="showScreen('dashboard')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </div>
+      <div class="nav-item" id="nav-spending" onclick="showScreen('spending')">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Spending</span>
+      </div>
+      <div class="nav-item" id="nav-forecast" onclick="showScreen('forecast')">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Forecast</span>
+      </div>
+      <div class="nav-item" id="nav-transactions" onclick="showScreen('transactions')">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Transactions</span>
+      </div>
+      <div class="nav-item" id="nav-settings" onclick="showScreen('dashboard')">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Settings</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function confirmTxn(btn) {
+  const card = btn.closest('div[style*="border-radius:14px"]');
+  card.style.opacity = '0.5';
+  card.style.pointerEvents = 'none';
+  const confirmBtn = btn;
+  confirmBtn.textContent = '✓ Confirmed';
+  confirmBtn.style.background = '#0d2e1a';
+}
+function showCategorise() { showScreen('categorise'); }
+function selectCat(el, name, bg, color) {
+  document.querySelectorAll('#screen-categorise [onclick^="selectCat"]').forEach(r => {
+    r.style.background = ''; r.style.borderRadius = ''; r.style.margin = '';
+    const label = r.querySelector('span:last-child');
+    if (label && label.textContent === '✓') label.remove();
+    r.querySelector('span:first-of-type').style.fontWeight = '';
+  });
+  el.style.background = '#2d2b4e';
+  el.style.borderRadius = '10px';
+  el.style.margin = '0 12px';
+  el.querySelector('span:first-of-type').style.fontWeight = '600';
+  if (!el.querySelector('span[style*="color:#6c63ff"]')) {
+    const tick = document.createElement('span');
+    tick.textContent = '✓'; tick.style.cssText = 'font-size:14px; color:#6c63ff;';
+    el.appendChild(tick);
+  }
+  const prompt = document.getElementById('rule-prompt');
+  prompt.querySelector('span').textContent = name;
+}
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('[id^="btn-"]').forEach(b => {
+    b.style.background = '#1e1e2e'; b.style.color = '#888'; b.style.borderColor = '#2a2a3a';
+  });
+  document.getElementById('screen-' + name).classList.add('active');
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+  const btn = document.getElementById('btn-' + name);
+  if (btn) { btn.style.background = '#2d2b4e'; btn.style.color = '#a5b4fc'; btn.style.borderColor = '#6c63ff'; }
+  document.getElementById('phone-screen').scrollTop = 0;
+}
+</script>
+</body>
+</html>
