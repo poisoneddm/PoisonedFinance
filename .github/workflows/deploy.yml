@@ -1,0 +1,47 @@
+# .github/workflows/deploy.yml
+# Deploys to Fly.io on push to main (after PR merge) or manual dispatch.
+#
+# Prerequisites:
+#   1. fly secrets set ... (Task 5) — all runtime secrets in Fly.io.
+#   2. FLY_API_TOKEN set in GitHub repo Secrets
+#      (Settings → Secrets and variables → Actions → New repository secret).
+#      Generate token: fly tokens create deploy -x 999999h --app poisonedfinance-api
+#   3. Fly.io app created: fly apps create poisonedfinance-api --org personal
+#   4. Fly.io Postgres attached: fly postgres attach <pg-app-name> --app poisonedfinance-api
+#
+# The release_command in fly.toml runs migrations before traffic shifts.
+# A migration failure aborts the deploy and keeps the previous release live.
+
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual deploy"
+        required: false
+        default: "manual trigger"
+
+jobs:
+  deploy:
+    name: Deploy — poisonedfinance-api
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io (remote build)
+        # --remote-only: Fly.io builds the Docker image on its own builders.
+        # No local Docker daemon required on the GitHub Actions runner.
+        # The Dockerfile is at api/Dockerfile; fly.toml specifies dockerfile = "api/Dockerfile".
+        run: flyctl deploy --remote-only --app poisonedfinance-api
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
