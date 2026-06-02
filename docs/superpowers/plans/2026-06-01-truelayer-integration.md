@@ -15,12 +15,15 @@
 ```
 api/src/
 ├── lib/
-│   └── crypto.ts                     # AES-256-GCM encrypt / decrypt
+│   ├── crypto.ts                     # AES-256-GCM encrypt / decrypt
+│   └── currentUser.ts                # SEED_USER_ID constant (from Plan B)
 ├── truelayer/
 │   ├── types.ts                      # TrueLayer API response shapes
 │   ├── oauth.ts                      # buildAuthUrl, exchangeCode, refreshToken
-│   ├── client.ts                     # fetchWithAuth (attaches Bearer token, auto-refreshes)
-│   └── sync.ts                       # syncAccounts, syncTransactions, syncUser
+│   ├── client.ts                     # fetchWithAuth (attaches Bearer token)
+│   ├── tokens.ts                     # getValidAccessToken(connectionId) — refresh-on-expiry
+│   └── sync.ts                       # syncAccounts(userId, connectionId, accessToken),
+│                                     # syncTransactions, syncUser
 └── routes/
     ├── auth.ts                       # GET /auth/truelayer, GET /auth/callback
     └── sync.ts                       # POST /sync/:userId
@@ -439,7 +442,164 @@ git commit -m "feat(api): add TrueLayer authenticated API client"
 
 ---
 
-### Task 5: Sync logic
+### Task 5: Token refresh helper
+
+**Files:**
+- Create: `api/src/truelayer/tokens.ts`
+- Create: `api/src/__tests__/truelayer/tokens.test.ts`
+
+`getValidAccessToken(connectionId)` reads the `bank_connections` row, returns the decrypted access token if not near expiry, or refreshes (persist new encrypted tokens + expiry) and returns the new access token if within 60 s of expiry.
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `api/src/__tests__/truelayer/tokens.test.ts`:
+
+```typescript
+import { getValidAccessToken } from '@/truelayer/tokens';
+
+const mockQuery = jest.fn();
+jest.mock('@/db/client', () => ({ pool: { query: mockQuery } }));
+
+const mockRefresh = jest.fn();
+jest.mock('@/truelayer/oauth', () => ({ refreshAccessToken: mockRefresh }));
+
+jest.mock('@/lib/crypto', () => ({
+  encrypt: jest.fn((s: string) => `enc:${s}`),
+  decrypt: jest.fn((s: string) => s.replace('enc:', '')),
+}));
+
+process.env.ENCRYPTION_KEY = Buffer.from('a'.repeat(32)).toString('base64');
+
+beforeEach(() => { mockQuery.mockReset(); mockRefresh.mockReset(); });
+
+it('returns decrypted access token when not near expiry', async () => {
+  const futureExpiry = new Date(Date.now() + 3600 * 1000).toISOString();
+  mockQuery.mockResolvedValueOnce({
+    rows: [{
+      id: 'conn-1',
+      access_token_enc: 'enc:valid-access-token',
+      refresh_token_enc: 'enc:some-refresh',
+      token_expires_at: futureExpiry,
+    }],
+  });
+
+  const token = await getValidAccessToken('conn-1');
+
+  expect(mockRefresh).not.toHaveBeenCalled();
+  expect(token).toBe('valid-access-token');
+});
+
+it('refreshes and persists new tokens when within 60s of expiry', async () => {
+  const nearExpiry = new Date(Date.now() + 30 * 1000).toISOString(); // 30s away
+  mockQuery
+    .mockResolvedValueOnce({
+      rows: [{
+        id: 'conn-1',
+        access_token_enc: 'enc:old-access',
+        refresh_token_enc: 'enc:old-refresh',
+        token_expires_at: nearExpiry,
+      }],
+    })
+    .mockResolvedValueOnce({ rows: [] }); // UPDATE bank_connections
+
+  mockRefresh.mockResolvedValueOnce({
+    access_token: 'new-access-token',
+    refresh_token: 'new-refresh-token',
+    expires_in: 3600,
+  });
+
+  const token = await getValidAccessToken('conn-1');
+
+  expect(mockRefresh).toHaveBeenCalledWith('old-refresh');
+  expect(token).toBe('new-access-token');
+
+  const updateCall = mockQuery.mock.calls.find(
+    c => typeof c[0] === 'string' && c[0].includes('UPDATE bank_connections'),
+  );
+  expect(updateCall).toBeDefined();
+  expect(updateCall![1]).toContain('enc:new-access-token');
+  expect(updateCall![1]).toContain('enc:new-refresh-token');
+});
+
+it('throws when connection is not found', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [] });
+  await expect(getValidAccessToken('missing-conn')).rejects.toThrow('Bank connection not found');
+});
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+```bash
+cd api && npm test -- --testPathPattern="truelayer/tokens"
+```
+
+Expected: FAIL — `Cannot find module '@/truelayer/tokens'`
+
+- [ ] **Step 3: Create `api/src/truelayer/tokens.ts`**
+
+```typescript
+import { pool } from '@/db/client';
+import { encrypt, decrypt } from '@/lib/crypto';
+import { refreshAccessToken } from './oauth';
+
+const REFRESH_THRESHOLD_MS = 60 * 1000; // refresh if within 60s of expiry
+
+export async function getValidAccessToken(connectionId: string): Promise<string> {
+  const { rows } = await pool.query<{
+    id: string;
+    access_token_enc: string;
+    refresh_token_enc: string;
+    token_expires_at: string;
+  }>(
+    `SELECT id, access_token_enc, refresh_token_enc, token_expires_at
+     FROM bank_connections WHERE id = $1`,
+    [connectionId],
+  );
+
+  if (rows.length === 0) throw new Error('Bank connection not found');
+
+  const conn = rows[0];
+  const expiresAt = new Date(conn.token_expires_at).getTime();
+  const now = Date.now();
+
+  if (expiresAt > now + REFRESH_THRESHOLD_MS) {
+    // Token still valid — just decrypt and return
+    return decrypt(conn.access_token_enc);
+  }
+
+  // Near expiry — refresh
+  const tokens = await refreshAccessToken(decrypt(conn.refresh_token_enc));
+  const newExpiresAt = new Date(now + tokens.expires_in * 1000);
+
+  await pool.query(
+    `UPDATE bank_connections
+     SET access_token_enc = $1, refresh_token_enc = $2, token_expires_at = $3
+     WHERE id = $4`,
+    [encrypt(tokens.access_token), encrypt(tokens.refresh_token), newExpiresAt, connectionId],
+  );
+
+  return tokens.access_token;
+}
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+```bash
+cd api && npm test -- --testPathPattern="truelayer/tokens"
+```
+
+Expected: PASS — 3/3
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add api/src/truelayer/tokens.ts api/src/__tests__/truelayer/tokens.test.ts
+git commit -m "feat(api): add getValidAccessToken with refresh-on-near-expiry"
+```
+
+---
+
+### Task 6: Sync logic
 
 **Files:**
 - Create: `api/src/truelayer/sync.ts`
@@ -480,15 +640,15 @@ const TRANSACTION: TrueLayerTransaction = {
 beforeEach(() => { mockQuery.mockReset(); mockFetch.mockReset(); });
 
 describe('syncAccounts', () => {
-  it('upserts each account returned by TrueLayer', async () => {
+  it('upserts each account with connection_id', async () => {
     mockFetch.mockResolvedValueOnce({ results: [ACCOUNT], status: 'Succeeded' });
     mockQuery.mockResolvedValue({ rows: [] });
 
-    await syncAccounts('user-1', 'linked-acc-id-1', 'access-token');
+    await syncAccounts('user-1', 'conn-id-1', 'access-token');
 
     expect(mockQuery).toHaveBeenCalledWith(
       expect.stringContaining('ON CONFLICT'),
-      expect.arrayContaining(['acc-001', 'NatWest Current']),
+      expect.arrayContaining(['acc-001', 'NatWest Current', 'conn-id-1']),
     );
   });
 });
@@ -525,6 +685,18 @@ describe('syncTransactions', () => {
     expect(upsertCall[1]).toContain('2026-05-30');
     expect(upsertCall[1]).toContain('2026-05-31');
   });
+
+  it('fetches 180 days of transactions', async () => {
+    mockFetch.mockResolvedValueOnce({ results: [], status: 'Succeeded' });
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    await syncTransactions('user-1', 'linked-acc-id-1', 'acc-001', 'access-token');
+
+    const [url] = mockFetch.mock.calls[0] as [string, string];
+    const fromDate = new Date(url.match(/from=(\d{4}-\d{2}-\d{2})/)![1]);
+    const daysDiff = Math.round((Date.now() - fromDate.getTime()) / (24 * 60 * 60 * 1000));
+    expect(daysDiff).toBeCloseTo(180, -1); // within a day
+  });
 });
 ```
 
@@ -545,7 +717,7 @@ import type { TrueLayerAccount, TrueLayerApiResponse, TrueLayerTransaction } fro
 
 export async function syncAccounts(
   userId: string,
-  linkedAccountId: string,
+  connectionId: string,
   accessToken: string,
 ): Promise<void> {
   const data = await fetchTrueLayer<TrueLayerApiResponse<TrueLayerAccount>>(
@@ -554,12 +726,14 @@ export async function syncAccounts(
   );
   for (const acct of data.results) {
     await pool.query(
-      `INSERT INTO linked_accounts (user_id, external_id, account_name, account_type, currency)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO linked_accounts
+         (user_id, connection_id, external_id, account_name, account_type, currency)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (user_id, external_id) DO UPDATE
          SET account_name = EXCLUDED.account_name,
-             account_type = EXCLUDED.account_type`,
-      [userId, acct.account_id, acct.display_name, acct.account_type, acct.currency],
+             account_type = EXCLUDED.account_type,
+             connection_id = EXCLUDED.connection_id`,
+      [userId, connectionId, acct.account_id, acct.display_name, acct.account_type, acct.currency],
     );
   }
 }
@@ -571,7 +745,7 @@ export async function syncTransactions(
   accessToken: string,
 ): Promise<void> {
   const to = new Date().toISOString().slice(0, 10);
-  const from = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const from = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const data = await fetchTrueLayer<TrueLayerApiResponse<TrueLayerTransaction>>(
     `/data/v1/accounts/${externalAccountId}/transactions?from=${from}&to=${to}`,
@@ -608,13 +782,13 @@ export async function syncTransactions(
 cd api && npm test -- --testPathPattern="truelayer/sync"
 ```
 
-Expected: PASS — 3/3
+Expected: PASS — 4/4
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add api/src/truelayer/sync.ts api/src/__tests__/truelayer/sync.test.ts
-git commit -m "feat(api): add TrueLayer account and transaction sync"
+git commit -m "feat(api): add TrueLayer account and transaction sync (180-day window)"
 ```
 
 ---

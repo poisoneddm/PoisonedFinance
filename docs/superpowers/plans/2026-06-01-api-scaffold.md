@@ -24,9 +24,13 @@ api/
     │   ├── client.ts                         # pg.Pool singleton
     │   ├── migrate.ts                        # run pending .sql files in sorted order
     │   └── migrations/
-    │       ├── 001_initial_schema.sql        # users, linked_accounts, categories,
-    │       │                                 # categorisation_rules, transactions, monthly_goals
-    │       └── 002_seed_categories.sql       # 11 default categories with colours
+    │       ├── 001_initial_schema.sql        # users, bank_connections, linked_accounts,
+    │       │                                 # categories, categorisation_rules,
+    │       │                                 # transactions, monthly_goals
+    │       ├── 002_seed_categories.sql       # 11 default categories with colours
+    │       └── 003_seed_user.sql             # single seed user for MVP auth bootstrap
+    ├── lib/
+    │   └── currentUser.ts                    # SEED_USER_ID constant
     ├── routes/
     │   └── health.ts                         # GET /health (pings DB)
     └── types/
@@ -156,9 +160,20 @@ export interface User {
   created_at: Date;
 }
 
+export interface BankConnection {
+  id: string;
+  user_id: string;
+  provider: string;
+  access_token_enc: string;
+  refresh_token_enc: string;
+  token_expires_at: Date;
+  created_at: Date;
+}
+
 export interface LinkedAccount {
   id: string;
   user_id: string;
+  connection_id: string;
   provider: string;
   external_id: string;
   account_name: string;
@@ -361,6 +376,25 @@ it('skips migrations already recorded in _migrations', async () => {
   const fs = require('fs');
   expect(fs.readFileSync).not.toHaveBeenCalled();
 });
+
+it('issues BEGIN before running each migration', async () => {
+  await runMigrations();
+  const calls = (mockQuery.mock.calls as [string, ...unknown[]][]).map(c => c[0]);
+  expect(calls).toContain('BEGIN');
+});
+
+it('rolls back and rethrows when a migration SQL errors', async () => {
+  mockQuery.mockImplementation(async (sql: string) => {
+    if (sql.includes('-- content of')) throw new Error('syntax error');
+    return { rows: [] };
+  });
+
+  await expect(runMigrations()).rejects.toThrow('syntax error');
+  const calls = (mockQuery.mock.calls as [string, ...unknown[]][]).map(c => c[0]);
+  expect(calls).toContain('ROLLBACK');
+  // COMMIT must not have been issued
+  expect(calls).not.toContain('COMMIT');
+});
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -382,19 +416,27 @@ CREATE TABLE users (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE bank_connections (
+  id                 UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id            UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider           TEXT        NOT NULL,
+  access_token_enc   TEXT        NOT NULL,
+  refresh_token_enc  TEXT        NOT NULL,
+  token_expires_at   TIMESTAMPTZ NOT NULL,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE linked_accounts (
-  id                UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id           UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  provider          TEXT        NOT NULL DEFAULT 'truelayer',
-  external_id       TEXT        NOT NULL,
-  account_name      TEXT        NOT NULL,
-  account_type      TEXT        NOT NULL,
-  currency          TEXT        NOT NULL DEFAULT 'GBP',
-  access_token_enc  TEXT,
-  refresh_token_enc TEXT,
-  token_expires_at  TIMESTAMPTZ,
-  last_synced_at    TIMESTAMPTZ,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  id             UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id        UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  connection_id  UUID        NOT NULL REFERENCES bank_connections(id) ON DELETE CASCADE,
+  provider       TEXT        NOT NULL DEFAULT 'truelayer',
+  external_id    TEXT        NOT NULL,
+  account_name   TEXT        NOT NULL,
+  account_type   TEXT        NOT NULL,
+  currency       TEXT        NOT NULL DEFAULT 'GBP',
+  last_synced_at TIMESTAMPTZ,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, external_id)
 );
 
@@ -467,7 +509,15 @@ INSERT INTO categories (name, meta_bucket, color_hex) VALUES
 ON CONFLICT (name) DO NOTHING;
 ```
 
-- [ ] **Step 5: Create `api/src/db/migrate.ts`**
+- [ ] **Step 5: Create `api/src/db/migrations/003_seed_user.sql`**
+
+```sql
+INSERT INTO users (id, email)
+VALUES ('00000000-0000-0000-0000-000000000001', 'owner@poisonedfinance.local')
+ON CONFLICT (id) DO NOTHING;
+```
+
+- [ ] **Step 6: Create `api/src/db/migrate.ts`**
 
 ```typescript
 import fs from 'fs';
@@ -495,22 +545,29 @@ export async function runMigrations(): Promise<void> {
     if (rows.length > 0) continue;
 
     const sql = fs.readFileSync(path.join(dir, filename), 'utf8');
-    await pool.query(sql);
-    await pool.query('INSERT INTO _migrations (filename) VALUES ($1)', [filename]);
-    console.log(`[migrate] ran ${filename}`);
+    try {
+      await pool.query('BEGIN');
+      await pool.query(sql);
+      await pool.query('INSERT INTO _migrations (filename) VALUES ($1)', [filename]);
+      await pool.query('COMMIT');
+      console.log(`[migrate] ran ${filename}`);
+    } catch (err) {
+      await pool.query('ROLLBACK');
+      throw err;
+    }
   }
 }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 7: Run the tests to verify they pass**
 
 ```bash
 cd api && npm test -- --testPathPattern="db/migrate"
 ```
 
-Expected: PASS — 3/3
+Expected: PASS — 5/5
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add api/src/db/migrate.ts api/src/db/migrations/ api/src/__tests__/db/migrate.test.ts
@@ -621,7 +678,59 @@ git commit -m "feat(api): add Express app factory and GET /health endpoint"
 
 ---
 
-### Task 6: Entry point
+### Task 6: Seed user helper
+
+**Files:**
+- Create: `api/src/lib/currentUser.ts`
+- Create: `api/src/__tests__/lib/currentUser.test.ts`
+
+- [ ] **Step 1: Write the failing test**
+
+Create `api/src/__tests__/lib/currentUser.test.ts`:
+
+```typescript
+import { SEED_USER_ID } from '@/lib/currentUser';
+
+describe('SEED_USER_ID', () => {
+  it('is the fixed UUID from contracts §1', () => {
+    expect(SEED_USER_ID).toBe('00000000-0000-0000-0000-000000000001');
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+```bash
+cd api && npm test -- --testPathPattern="lib/currentUser"
+```
+
+Expected: FAIL — `Cannot find module '@/lib/currentUser'`
+
+- [ ] **Step 3: Create `api/src/lib/currentUser.ts`**
+
+```typescript
+/** Fixed seed user UUID — MVP single-user auth bootstrap (contracts §1). */
+export const SEED_USER_ID = '00000000-0000-0000-0000-000000000001';
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+```bash
+cd api && npm test -- --testPathPattern="lib/currentUser"
+```
+
+Expected: PASS — 1/1
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add api/src/lib/currentUser.ts api/src/__tests__/lib/currentUser.test.ts
+git commit -m "feat(api): add SEED_USER_ID constant for MVP auth bootstrap"
+```
+
+---
+
+### Task 8: Entry point
 
 **Files:**
 - Create: `api/src/index.ts`
@@ -668,7 +777,7 @@ git commit -m "feat(api): add boot entry point (migrations → listen)"
 
 ---
 
-### Task 7: Full suite + push
+### Task 9: Full suite + push
 
 - [ ] **Step 1: Run the full test suite**
 
@@ -681,9 +790,10 @@ Expected:
  PASS  src/__tests__/db/client.test.ts
  PASS  src/__tests__/db/migrate.test.ts
  PASS  src/__tests__/routes/health.test.ts
+ PASS  src/__tests__/lib/currentUser.test.ts
 
-Test Suites: 3 passed, 3 total
-Tests:       6 passed, 0 failed
+Test Suites: 4 passed, 4 total
+Tests:       7 passed, 0 failed
 ```
 
 Fix any failures before pushing.
@@ -700,10 +810,15 @@ git push origin claude/sleepy-ride-4eN6l
 
 ### Spec coverage
 - [x] Node.js/TypeScript project → Task 1
-- [x] PostgreSQL schema (users, linked_accounts, categories, rules, transactions, monthly_goals) → Task 4
-- [x] Default category seed (all 11 categories with correct meta-buckets and colours) → Task 4
-- [x] Migration runner (idempotent, sorted, tracked) → Task 4
-- [x] Express server with health check → Tasks 5–6
+- [x] PostgreSQL schema (users, bank_connections, linked_accounts with connection_id FK, categories, rules, transactions, monthly_goals) → Task 4
+- [x] `bank_connections` table with token columns; `linked_accounts` references it via `connection_id` (no token columns on linked_accounts) → Task 4 (`001_initial_schema.sql`)
+- [x] `BankConnection` interface and updated `LinkedAccount` (connection_id, no token fields) → Task 2
+- [x] Default category seed (all 11 categories with correct meta-buckets and colours) → Task 4 (`002_seed_categories.sql`)
+- [x] Seed user migration → Task 4 (`003_seed_user.sql`)
+- [x] Migration runner (idempotent, sorted, tracked, BEGIN/COMMIT/ROLLBACK per file) → Task 4
+- [x] Migration tests assert BEGIN is issued and ROLLBACK fires on error → Task 4
+- [x] `lib/currentUser.ts` exporting SEED_USER_ID → Task 6
+- [x] Express server with health check → Tasks 5 and 8
 
 ### Placeholder scan
 No TBD, TODO, or vague instructions. Every step includes complete file content or exact commands.
@@ -711,4 +826,6 @@ No TBD, TODO, or vague instructions. Every step includes complete file content o
 ### Type consistency
 - `pool` exported from `@/db/client` — imported identically in `migrate.ts`, `routes/health.ts`, and all tests via mock path `@/db/client`.
 - `MetaBucket`, `CategorizationSource` defined in `@/types/index.ts` — will be imported by Plan C and Plan D without redefinition.
+- `BankConnection` and `LinkedAccount` types in `@/types/index.ts` match the `bank_connections` and `linked_accounts` schema columns exactly.
+- `SEED_USER_ID` exported from `@/lib/currentUser` — imported by routes/tests in Plans C and D via the same path.
 - `createApp()` defined in `app.ts`, imported in `index.ts` and in health test — same path `@/app`.

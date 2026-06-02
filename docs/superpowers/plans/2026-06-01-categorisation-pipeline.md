@@ -299,6 +299,60 @@ it('passes category names from DB as the allowed enum values', async () => {
   const enumValues = toolSchema.properties.results.items.properties.category.enum;
   expect(enumValues).toEqual(['Groceries', 'Eating Out']);
 });
+
+it('chunks 90 transactions into 3 API calls of 40/40/10', async () => {
+  // getCategoryNames query (once), then 3 chunk calls
+  mockQuery.mockResolvedValueOnce({ rows: [{ name: 'Shopping' }] });
+
+  const makeChunkResponse = (ids: string[]) => ({
+    content: [{
+      type: 'tool_use',
+      input: { results: ids.map(id => ({ id, category: 'Shopping' })) },
+    }],
+  });
+
+  // Build 90 transaction stubs
+  const txns: TxnForCategorisation[] = Array.from({ length: 90 }, (_, i) => ({
+    id: `txn-${i}`,
+    merchant_name: `Merchant ${i}`,
+    description: `desc ${i}`,
+  }));
+
+  mockCreate
+    .mockResolvedValueOnce(makeChunkResponse(txns.slice(0, 40).map(t => t.id)))
+    .mockResolvedValueOnce(makeChunkResponse(txns.slice(40, 80).map(t => t.id)))
+    .mockResolvedValueOnce(makeChunkResponse(txns.slice(80).map(t => t.id)));
+
+  const results = await batchCategorise(txns);
+
+  expect(mockCreate).toHaveBeenCalledTimes(3);
+  expect(results).toHaveLength(90);
+});
+
+it('continues remaining chunks when one chunk throws', async () => {
+  mockQuery.mockResolvedValueOnce({ rows: [{ name: 'Shopping' }] });
+
+  const txns: TxnForCategorisation[] = Array.from({ length: 80 }, (_, i) => ({
+    id: `txn-${i}`,
+    merchant_name: `Merchant ${i}`,
+    description: `desc ${i}`,
+  }));
+
+  mockCreate
+    .mockRejectedValueOnce(new Error('API error'))
+    .mockResolvedValueOnce({
+      content: [{
+        type: 'tool_use',
+        input: { results: txns.slice(40).map(t => ({ id: t.id, category: 'Shopping' })) },
+      }],
+    });
+
+  const results = await batchCategorise(txns);
+
+  expect(mockCreate).toHaveBeenCalledTimes(2);
+  // Only second chunk succeeded — first 40 silently dropped (left for manual review)
+  expect(results).toHaveLength(40);
+});
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -311,26 +365,26 @@ Expected: FAIL — `Cannot find module '@/categorisation/claude'`
 
 - [ ] **Step 3: Create `api/src/categorisation/claude.ts`**
 
+Transactions are chunked into groups of 40. Each chunk is an independent API call wrapped in `try/catch` — if one chunk fails, those transactions are left `category_id NULL, needs_review TRUE` and the remaining chunks continue.
+
 ```typescript
 import Anthropic from '@anthropic-ai/sdk';
 import { pool } from '@/db/client';
 import type { TxnForCategorisation, CategorizationResult } from './types';
 
 const MODEL = 'claude-sonnet-4-6';
+const CHUNK_SIZE = 40;
 
 async function getCategoryNames(): Promise<string[]> {
   const { rows } = await pool.query<{ name: string }>('SELECT name FROM categories ORDER BY name');
   return rows.map(r => r.name);
 }
 
-export async function batchCategorise(
-  transactions: TxnForCategorisation[],
+async function categoriseChunk(
+  client: Anthropic,
+  chunk: TxnForCategorisation[],
+  categoryNames: string[],
 ): Promise<CategorizationResult[]> {
-  if (transactions.length === 0) return [];
-
-  const client = new Anthropic();
-  const categoryNames = await getCategoryNames();
-
   const message = await client.messages.create({
     model: MODEL,
     max_tokens: 1024,
@@ -362,7 +416,7 @@ export async function batchCategorise(
       {
         role: 'user',
         content: `Categorise these UK bank transactions. Use the merchant name where available, otherwise the description.\n\n${JSON.stringify(
-          transactions.map(t => ({ id: t.id, merchant: t.merchant_name ?? t.description })),
+          chunk.map(t => ({ id: t.id, merchant: t.merchant_name ?? t.description })),
           null,
           2,
         )}`,
@@ -376,6 +430,28 @@ export async function batchCategorise(
   const { results } = toolUse.input as { results: Array<{ id: string; category: string }> };
   return results.map(r => ({ id: r.id, category_name: r.category, source: 'ai' as const }));
 }
+
+export async function batchCategorise(
+  transactions: TxnForCategorisation[],
+): Promise<CategorizationResult[]> {
+  if (transactions.length === 0) return [];
+
+  const client = new Anthropic();
+  const categoryNames = await getCategoryNames();
+  const allResults: CategorizationResult[] = [];
+
+  for (let i = 0; i < transactions.length; i += CHUNK_SIZE) {
+    const chunk = transactions.slice(i, i + CHUNK_SIZE);
+    try {
+      const chunkResults = await categoriseChunk(client, chunk, categoryNames);
+      allResults.push(...chunkResults);
+    } catch {
+      // Failed chunk: transactions remain category_id NULL, needs_review TRUE
+    }
+  }
+
+  return allResults;
+}
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**
@@ -384,7 +460,7 @@ export async function batchCategorise(
 cd api && npm test -- --testPathPattern="categorisation/claude"
 ```
 
-Expected: PASS — 2/2
+Expected: PASS — 5/5
 
 - [ ] **Step 5: Commit**
 
@@ -841,7 +917,7 @@ router.get('/review/:userId', async (req, res) => {
             c.name AS category_name, c.meta_bucket,
             la.account_name
      FROM transactions t
-     JOIN categories c ON c.id = t.category_id
+     LEFT JOIN categories c ON c.id = t.category_id
      JOIN linked_accounts la ON la.id = t.account_id
      WHERE t.user_id = $1 AND t.needs_review = TRUE
      ORDER BY t.transaction_date DESC`,
@@ -1010,6 +1086,8 @@ git push origin claude/sleepy-ride-4eN6l
 - [x] Rule-matched transactions marked `needs_review = FALSE` → Task 5
 - [x] Review Queue: list pending, confirm, change → Task 7
 - [x] Pipeline called after sync → Task 6
+- [x] `batchCategorise` chunks 40 per API call — 90 txns → 3 calls (tested) → Task 4
+- [x] Failed chunk leaves those transactions `category_id NULL, needs_review TRUE`; remaining chunks continue (tested) → Task 4
 
 ### Placeholder scan
 No TBD, TODO, or vague instructions present.
