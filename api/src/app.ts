@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import healthRouter from '@/routes/health';
 import authRouter from '@/routes/auth';
 import syncRouter from '@/routes/sync';
+import reviewRouter from '@/routes/review';
 
 export function createApp() {
   const app = express();
@@ -13,5 +14,6 @@ export function createApp() {
   app.use(healthRouter);
   app.use(authRouter);
   app.use(syncRouter);
+  app.use(reviewRouter);
   return app;
 }
