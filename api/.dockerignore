@@ -1,0 +1,34 @@
+# Dependencies — builder stage runs its own npm install
+node_modules/
+
+# Local compiled output — builder produces its own dist/
+dist/
+
+# Secrets — never bake into image
+.env
+.env.local
+.env*.local
+
+# Test output and coverage
+coverage/
+*.lcov
+junit.xml
+
+# Editor and OS artefacts
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker itself (avoid recursive context)
+Dockerfile
+.dockerignore
