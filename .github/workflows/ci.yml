@@ -1,0 +1,71 @@
+# .github/workflows/ci.yml
+# Runs on every push and pull request.
+# Jobs: test (api + mobile unit tests), bdd (jest-cucumber feature specs).
+# BDD @wip scenarios are non-blocking (continue-on-error: true) per contracts §14.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  # ── Unit tests (API + Mobile) ───────────────────────────────────────────────
+  test:
+    name: Unit tests — ${{ matrix.workspace }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [api, mobile]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ matrix.workspace }}/package.json
+
+      - name: Install dependencies
+        run: cd ${{ matrix.workspace }} && npm install
+
+      - name: Run tests
+        run: cd ${{ matrix.workspace }} && npm test
+
+  # ── BDD feature specs (jest-cucumber, contracts §14) ───────────────────────
+  bdd:
+    name: BDD feature specs
+    runs-on: ubuntu-latest
+    # BDD job does not block merge — it is informational until all scenarios land.
+    # Remove this line once all @wip tags are cleared.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: api/package.json
+
+      - name: Install API dependencies
+        run: cd api && npm install
+
+      - name: Run BDD specs (non-@wip) — blocking
+        # Runs only the implemented scenarios; failure blocks CI.
+        run: cd api && npm test -- --testPathPattern="__tests__/features" --testNamePattern="^(?!.*@wip)"
+
+      - name: Run BDD specs (@wip) — non-blocking
+        # Runs @wip-tagged scenarios; failure is reported but does not block merge
+        # until the corresponding implementation plan lands (contracts §14).
+        continue-on-error: true
+        run: cd api && npm test -- --testPathPattern="__tests__/features" --testNamePattern="@wip"
