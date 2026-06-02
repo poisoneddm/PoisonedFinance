@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "PoisonedFinance",
+    "slug": "poisonedfinance",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "poisonedfinance",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0f0f13",
+    "splash": { "backgroundColor": "#0f0f13" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.poisoneddm.poisonedfinance"
+    },
+    "android": {
+      "package": "com.poisoneddm.poisonedfinance",
+      "adaptiveIcon": { "backgroundColor": "#0f0f13" }
+    },
+    "plugins": ["expo-router"]
+  }
+}

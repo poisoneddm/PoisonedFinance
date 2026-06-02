@@ -1,0 +1,45 @@
+{
+  "name": "poisonedfinance-mobile",
+  "version": "0.1.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "test": "jest --watchAll=false"
+  },
+  "dependencies": {
+    "expo": "~51.0.0",
+    "expo-router": "~3.5.0",
+    "expo-status-bar": "~1.12.1",
+    "react": "18.2.0",
+    "react-native": "0.74.0",
+    "@expo/vector-icons": "^14.0.0",
+    "expo-document-picker": "~11.10.1",
+    "react-native-safe-area-context": "4.10.1",
+    "react-native-screens": "3.31.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@testing-library/react-native": "^12.4.3",
+    "@types/jest": "^29.5.12",
+    "@types/react": "~18.2.79",
+    "jest": "^29.7.0",
+    "jest-cucumber": "^3.0.1",
+    "jest-expo": "~51.0.0",
+    "typescript": "~5.3.3"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    },
+    "testMatch": [
+      "**/?(*.)+(spec|test).[jt]s?(x)",
+      "**/__tests__/**/*.steps.ts"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|jest-cucumber|@cucumber|uuid)"
+    ]
+  }
+}

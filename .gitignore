@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment secrets — never commit
+.env
+.env.local
+.env*.local
+
+# Test output
+coverage/
+*.lcov
+junit.xml
+
+# Claude Code worktrees (agent working state)
+.claude/worktrees/
+
+# Editor and OS artefacts
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
