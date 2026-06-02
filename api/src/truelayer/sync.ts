@@ -1,5 +1,6 @@
 import { pool } from '@/db/client';
 import { fetchTrueLayer } from './client';
+import { runPipeline } from '@/categorisation/pipeline';
 import type { TrueLayerAccount, TrueLayerApiResponse, TrueLayerTransaction } from './types';
 
 export async function syncAccounts(
@@ -39,6 +40,8 @@ export async function syncTransactions(
     accessToken,
   );
 
+  const newIds: string[] = [];
+
   for (const txn of data.results) {
     const postedDate = txn.timestamp.slice(0, 10);
     const transactionDate = txn.meta?.transaction_time
@@ -46,12 +49,13 @@ export async function syncTransactions(
       : postedDate;
     const amountPence = Math.round(txn.amount * 100);
 
-    await pool.query(
+    const { rows } = await pool.query<{ id: string }>(
       `INSERT INTO transactions
          (account_id, user_id, external_id, merchant_name, description,
           amount_pence, currency, transaction_date, posted_date, needs_review)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, TRUE)
-       ON CONFLICT (account_id, external_id) DO NOTHING`,
+       ON CONFLICT (account_id, external_id) DO NOTHING
+       RETURNING id`,
       [
         linkedAccountId, userId, txn.transaction_id,
         txn.merchant_name ?? null, txn.description,
@@ -59,5 +63,10 @@ export async function syncTransactions(
         transactionDate, postedDate,
       ],
     );
+    if (rows.length > 0) newIds.push(rows[0].id);
+  }
+
+  if (newIds.length > 0) {
+    await runPipeline(userId, newIds);
   }
 }

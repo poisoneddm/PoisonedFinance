@@ -6,6 +6,9 @@ jest.mock('@/db/client', () => ({ pool: { query: mockQuery } }));
 const mockFetch = jest.fn();
 jest.mock('@/truelayer/client', () => ({ fetchTrueLayer: mockFetch }));
 
+const mockRunPipeline = jest.fn();
+jest.mock('@/categorisation/pipeline', () => ({ runPipeline: mockRunPipeline }));
+
 // Import the unit under test AFTER mocks are declared so the @/db/client mock
 // factory doesn't read mockQuery before it is initialised (temporal dead zone).
 import { syncAccounts, syncTransactions } from '@/truelayer/sync';
@@ -28,7 +31,7 @@ const TRANSACTION: TrueLayerTransaction = {
   currency: 'GBP',
 };
 
-beforeEach(() => { mockQuery.mockReset(); mockFetch.mockReset(); });
+beforeEach(() => { mockQuery.mockReset(); mockFetch.mockReset(); mockRunPipeline.mockReset(); });
 
 describe('syncAccounts', () => {
   it('upserts each account with connection_id', async () => {
@@ -87,5 +90,14 @@ describe('syncTransactions', () => {
     const fromDate = new Date(url.match(/from=(\d{4}-\d{2}-\d{2})/)![1]);
     const daysDiff = Math.round((Date.now() - fromDate.getTime()) / (24 * 60 * 60 * 1000));
     expect(daysDiff).toBeCloseTo(180, -1); // within a day
+  });
+
+  it('calls runPipeline with the IDs of newly inserted transactions', async () => {
+    mockFetch.mockResolvedValueOnce({ results: [TRANSACTION], status: 'Succeeded' });
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'new-txn-uuid' }] }); // INSERT ... RETURNING id
+
+    await syncTransactions('user-1', 'linked-acc-id-1', 'acc-001', 'access-token');
+
+    expect(mockRunPipeline).toHaveBeenCalledWith('user-1', ['new-txn-uuid']);
   });
 });
