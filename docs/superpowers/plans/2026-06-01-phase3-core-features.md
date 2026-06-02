@@ -585,7 +585,7 @@ describe('GET /dashboard/:userId', () => {
     expect(needsPill).toBeDefined();
     expect(needsPill.spent_pence).toBe(80000);
     expect(needsPill.goal_pence).toBe(100000); // ROUND(250000 * 40 / 100)
-    expect(needsPill.status).toBe('green'); // 80000/100000 = 0.8, but wait — 0.8 ≥ 0.5 so amber
+    expect(needsPill.status).toBe('amber'); // 80000/100000 = 0.8 → ≥ 0.5 and < 1.0 → amber
   });
 
   it('pill status is computed by pillStatus helper', async () => {
@@ -715,31 +715,16 @@ export default router;
 
 - [ ] **Step 4: Modify `api/src/app.ts` — mount dashboard router**
 
-Open `api/src/app.ts` and add the import and `app.use(dashboardRouter)` line. The file currently reads:
+Add the following import and `app.use` line to the existing `api/src/app.ts` (which at this point already has health, auth, sync, and review routers from Plans B–D):
 
 ```typescript
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import healthRouter from '@/routes/health';
-
-export function createApp() {
-  const app = express();
-  app.use(helmet());
-  app.use(cors());
-  app.use(express.json());
-  app.use(healthRouter);
-  return app;
-}
-```
-
-Replace with:
-
-```typescript
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import healthRouter from '@/routes/health';
+import authRouter from '@/routes/auth';
+import syncRouter from '@/routes/sync';
+import reviewRouter from '@/routes/review';
 import dashboardRouter from '@/routes/dashboard';
 
 export function createApp() {
@@ -748,6 +733,9 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
   app.use(healthRouter);
+  app.use(authRouter);
+  app.use(syncRouter);
+  app.use(reviewRouter);
   app.use(dashboardRouter);
   return app;
 }
@@ -974,6 +962,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import healthRouter from '@/routes/health';
+import authRouter from '@/routes/auth';
+import syncRouter from '@/routes/sync';
+import reviewRouter from '@/routes/review';
 import dashboardRouter from '@/routes/dashboard';
 import spendingRouter from '@/routes/spending';
 
@@ -983,6 +974,9 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
   app.use(healthRouter);
+  app.use(authRouter);
+  app.use(syncRouter);
+  app.use(reviewRouter);
   app.use(dashboardRouter);
   app.use(spendingRouter);
   return app;
@@ -1207,6 +1201,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import healthRouter from '@/routes/health';
+import authRouter from '@/routes/auth';
+import syncRouter from '@/routes/sync';
+import reviewRouter from '@/routes/review';
 import dashboardRouter from '@/routes/dashboard';
 import spendingRouter from '@/routes/spending';
 import transactionsRouter from '@/routes/transactions';
@@ -1217,6 +1214,9 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
   app.use(healthRouter);
+  app.use(authRouter);
+  app.use(syncRouter);
+  app.use(reviewRouter);
   app.use(dashboardRouter);
   app.use(spendingRouter);
   app.use(transactionsRouter);
@@ -1424,6 +1424,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import healthRouter from '@/routes/health';
+import authRouter from '@/routes/auth';
+import syncRouter from '@/routes/sync';
+import reviewRouter from '@/routes/review';
 import dashboardRouter from '@/routes/dashboard';
 import spendingRouter from '@/routes/spending';
 import transactionsRouter from '@/routes/transactions';
@@ -1435,6 +1438,9 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
   app.use(healthRouter);
+  app.use(authRouter);
+  app.use(syncRouter);
+  app.use(reviewRouter);
   app.use(dashboardRouter);
   app.use(spendingRouter);
   app.use(transactionsRouter);
@@ -1604,32 +1610,32 @@ import { statusColors, StatusColorResult } from '../statusColors';
 import { PillLevel } from '../types';
 
 describe('statusColors', () => {
-  it('green → pillGreenBg background token and green text token', () => {
+  it('green → dark green background and light green text', () => {
     const result: StatusColorResult = statusColors('green');
-    expect(result.bg).toBe('pillGreenBg');
-    expect(result.text).toBe('green');
+    expect(result.bg).toBe('#0d2e1a');
+    expect(result.text).toBe('#4ade80');
   });
 
-  it('amber → pillAmberBg background token and amber text token', () => {
+  it('amber → dark amber background and light amber text', () => {
     const result: StatusColorResult = statusColors('amber');
-    expect(result.bg).toBe('pillAmberBg');
-    expect(result.text).toBe('amber');
+    expect(result.bg).toBe('#2d2208');
+    expect(result.text).toBe('#fbbf24');
   });
 
-  it('red → pillRedBg background token and red text token', () => {
+  it('red → dark red background and light red text', () => {
     const result: StatusColorResult = statusColors('red');
-    expect(result.bg).toBe('pillRedBg');
-    expect(result.text).toBe('red');
+    expect(result.bg).toBe('#2d0a0a');
+    expect(result.text).toBe('#f87171');
   });
 
-  it('returns a result with bg and text properties for all PillLevel values', () => {
+  it('returns a result with bg and text hex strings for all PillLevel values', () => {
     const levels: PillLevel[] = ['green', 'amber', 'red'];
     for (const level of levels) {
       const result = statusColors(level);
       expect(result).toHaveProperty('bg');
       expect(result).toHaveProperty('text');
-      expect(typeof result.bg).toBe('string');
-      expect(typeof result.text).toBe('string');
+      expect(result.bg).toMatch(/^#[0-9a-f]{6}$/);
+      expect(result.text).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
 });
@@ -1655,26 +1661,26 @@ Expected: FAIL — `Cannot find module '../statusColors'`
 import { PillLevel } from './types';
 
 export interface StatusColorResult {
-  /** Theme token name for background colour */
+  /** Hex colour for background (usable as React Native backgroundColor) */
   bg: string;
-  /** Theme token name for text colour */
+  /** Hex colour for text */
   text: string;
 }
 
 /**
- * Maps a PillLevel to theme colour tokens per §7:
- *   green → bg pillGreenBg (#0d2e1a), text green
- *   amber → bg pillAmberBg (#2d2208), text amber
- *   red   → bg pillRedBg   (#2d0a0a), text red
+ * Maps a PillLevel to hex colour values per §7:
+ *   green → bg #0d2e1a (dark green), text #4ade80 (light green)
+ *   amber → bg #2d2208 (dark amber), text #fbbf24 (light amber)
+ *   red   → bg #2d0a0a (dark red),   text #f87171 (light red)
  */
 export function statusColors(level: PillLevel): StatusColorResult {
   switch (level) {
     case 'green':
-      return { bg: 'pillGreenBg', text: 'green' };
+      return { bg: '#0d2e1a', text: '#4ade80' };
     case 'amber':
-      return { bg: 'pillAmberBg', text: 'amber' };
+      return { bg: '#2d2208', text: '#fbbf24' };
     case 'red':
-      return { bg: 'pillRedBg', text: 'red' };
+      return { bg: '#2d0a0a', text: '#f87171' };
   }
 }
 ```
@@ -1761,6 +1767,28 @@ Expected: no errors.
 ```bash
 git add mobile/lib/api.ts
 git commit -m "feat(mobile): add typed apiGet/apiPost/apiPut using EXPO_PUBLIC_API_URL (§13)"
+```
+
+---
+
+### Task 10b: Create `mobile/lib/currentUser.ts`
+
+**Files:**
+- Create: `mobile/lib/currentUser.ts`
+
+The mobile screens import `SEED_USER_ID` from `@/lib/currentUser`. Create this file now so it is available for all screen implementations.
+
+- [ ] **Step 1: Create `mobile/lib/currentUser.ts`**
+
+```typescript
+export const SEED_USER_ID = '00000000-0000-0000-0000-000000000001';
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add mobile/lib/currentUser.ts
+git commit -m "feat(mobile): add SEED_USER_ID constant for MVP auth bootstrap"
 ```
 
 ---
@@ -2057,10 +2085,31 @@ cd mobile && npx jest --testPathPattern="__tests__/screens/DashboardScreen"
 
 Expected: PASS — 4/4
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Wire into tab route `mobile/app/(tabs)/index.tsx`**
+
+Update `mobile/app/(tabs)/index.tsx` to import and render `DashboardScreen` with the current month and SEED_USER_ID:
+
+```typescript
+import React from 'react';
+import { DashboardScreen } from '@/screens/DashboardScreen';
+import { SEED_USER_ID } from '@/lib/currentUser';
+
+export default function DashboardTab() {
+  const now = new Date();
+  return (
+    <DashboardScreen
+      userId={SEED_USER_ID}
+      year={now.getFullYear()}
+      month={now.getMonth() + 1}
+    />
+  );
+}
+```
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add mobile/screens/DashboardScreen.tsx mobile/__tests__/screens/DashboardScreen.test.tsx
+git add mobile/screens/DashboardScreen.tsx mobile/__tests__/screens/DashboardScreen.test.tsx mobile/app/(tabs)/index.tsx
 git commit -m "feat(mobile): wire DashboardScreen to /dashboard API via useMonthData hook"
 ```
 
@@ -2287,10 +2336,31 @@ cd mobile && npx jest --testPathPattern="__tests__/screens/SpendingScreen"
 
 Expected: PASS — 3/3
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Wire into tab route `mobile/app/(tabs)/spending.tsx`**
+
+Update `mobile/app/(tabs)/spending.tsx` to import and render `SpendingScreen`:
+
+```typescript
+import React from 'react';
+import { SpendingScreen } from '@/screens/SpendingScreen';
+import { SEED_USER_ID } from '@/lib/currentUser';
+
+export default function SpendingTab() {
+  const now = new Date();
+  return (
+    <SpendingScreen
+      userId={SEED_USER_ID}
+      year={now.getFullYear()}
+      month={now.getMonth() + 1}
+    />
+  );
+}
+```
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add mobile/screens/SpendingScreen.tsx mobile/__tests__/screens/SpendingScreen.test.tsx
+git add mobile/screens/SpendingScreen.tsx mobile/__tests__/screens/SpendingScreen.test.tsx mobile/app/(tabs)/spending.tsx
 git commit -m "feat(mobile): wire SpendingScreen to /spending API — goal bars + category breakdown"
 ```
 
@@ -2540,7 +2610,7 @@ cd mobile && npx jest --testPathPattern="__tests__/screens/TransactionsScreen"
 
 Expected: PASS — 4/4
 
-- [ ] **Step 5: Run full mobile test suite**
+- [ ] **Step 5: Run full mobile test suite** (do this BEFORE wiring the tab route)
 
 ```bash
 cd mobile && npx jest
@@ -2548,10 +2618,31 @@ cd mobile && npx jest
 
 Expected: all tests pass (format, statusColors, DashboardScreen, SpendingScreen, TransactionsScreen).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Wire into tab route `mobile/app/(tabs)/transactions.tsx`**
+
+Update `mobile/app/(tabs)/transactions.tsx` to import and render `TransactionsScreen`:
+
+```typescript
+import React from 'react';
+import { TransactionsScreen } from '@/screens/TransactionsScreen';
+import { SEED_USER_ID } from '@/lib/currentUser';
+
+export default function TransactionsTab() {
+  const now = new Date();
+  return (
+    <TransactionsScreen
+      userId={SEED_USER_ID}
+      year={now.getFullYear()}
+      month={now.getMonth() + 1}
+    />
+  );
+}
+```
+
+- [ ] **Step 7: Commit**
 
 ```bash
-git add mobile/screens/TransactionsScreen.tsx mobile/__tests__/screens/TransactionsScreen.test.tsx
+git add mobile/screens/TransactionsScreen.tsx mobile/__tests__/screens/TransactionsScreen.test.tsx mobile/app/(tabs)/transactions.tsx
 git commit -m "feat(mobile): wire TransactionsScreen to /transactions API — filtered list with amounts"
 ```
 

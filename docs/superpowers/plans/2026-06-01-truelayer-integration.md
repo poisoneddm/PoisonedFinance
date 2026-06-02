@@ -793,7 +793,7 @@ git commit -m "feat(api): add TrueLayer account and transaction sync (180-day wi
 
 ---
 
-### Task 6: Auth + sync routes
+### Task 7: Auth + sync routes
 
 **Files:**
 - Create: `api/src/routes/auth.ts`
@@ -810,7 +810,7 @@ Create `api/src/__tests__/routes/auth.test.ts`:
 import request from 'supertest';
 import { createApp } from '@/app';
 
-jest.mock('@/db/client', () => ({ pool: { query: jest.fn().mockResolvedValue({ rows: [] }) } }));
+jest.mock('@/db/client', () => ({ pool: { query: jest.fn().mockResolvedValue({ rows: [{ id: 'conn-1' }] }) } }));
 jest.mock('@/truelayer/oauth', () => ({
   buildAuthUrl: jest.fn(() => 'https://auth.truelayer.com/?state=test'),
   exchangeCode: jest.fn().mockResolvedValue({
@@ -819,6 +819,13 @@ jest.mock('@/truelayer/oauth', () => ({
 }));
 jest.mock('@/lib/crypto', () => ({
   encrypt: jest.fn(s => `enc:${s}`),
+}));
+jest.mock('@/truelayer/tokens', () => ({
+  getValidAccessToken: jest.fn().mockResolvedValue('fresh-token'),
+}));
+jest.mock('@/truelayer/sync', () => ({
+  syncAccounts: jest.fn().mockResolvedValue(undefined),
+  syncTransactions: jest.fn().mockResolvedValue(undefined),
 }));
 
 process.env.ENCRYPTION_KEY = Buffer.from('a'.repeat(32)).toString('base64');
@@ -839,14 +846,20 @@ describe('GET /auth/callback', () => {
     expect(res.status).toBe(400);
   });
 
-  it('exchanges code and stores tokens', async () => {
+  it('exchanges code and inserts bank_connection record', async () => {
     const { pool } = require('@/db/client');
-    const res = await request(app).get('/auth/callback?code=auth-code&state=user-1');
+    const res = await request(app).get('/auth/callback?code=auth-code&state=user-1:nonce');
     expect(res.status).toBe(200);
     expect(pool.query).toHaveBeenCalledWith(
-      expect.stringContaining('UPDATE linked_accounts'),
+      expect.stringContaining('INSERT INTO bank_connections'),
       expect.arrayContaining(['enc:acc', 'enc:ref']),
     );
+  });
+
+  it('calls syncAccounts with the new connectionId after storing the connection', async () => {
+    const { syncAccounts } = require('@/truelayer/sync');
+    await request(app).get('/auth/callback?code=auth-code&state=user-1:nonce');
+    expect(syncAccounts).toHaveBeenCalledWith('user-1', 'conn-1', 'fresh-token');
   });
 });
 ```
@@ -863,27 +876,30 @@ jest.mock('@/truelayer/sync', () => ({
   syncAccounts: jest.fn().mockResolvedValue(undefined),
   syncTransactions: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/lib/crypto', () => ({ decrypt: jest.fn(s => s.replace('enc:', '')) }));
+jest.mock('@/truelayer/tokens', () => ({
+  getValidAccessToken: jest.fn().mockResolvedValue('fresh-token'),
+}));
 
 const app = createApp();
 
 describe('POST /sync/:userId', () => {
   beforeEach(() => mockQuery.mockReset());
 
-  it('returns 404 when no linked accounts found', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
+  it('returns 404 when no bank connections found', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] }); // SELECT bank_connections
     const res = await request(app).post('/sync/user-1');
     expect(res.status).toBe(404);
   });
 
   it('returns 200 and syncs each account', async () => {
-    mockQuery.mockResolvedValueOnce({
-      rows: [{ id: 'la-1', external_id: 'acc-001', access_token_enc: 'enc:token' }],
-    });
-    const { syncAccounts, syncTransactions } = require('@/truelayer/sync');
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'conn-1' }] })                        // SELECT bank_connections
+      .mockResolvedValueOnce({ rows: [{ id: 'la-1', external_id: 'acc-001' }] })  // SELECT linked_accounts
+      .mockResolvedValueOnce({ rows: [] });                                         // UPDATE last_synced_at
+    const { syncTransactions } = require('@/truelayer/sync');
     const res = await request(app).post('/sync/user-1');
     expect(res.status).toBe(200);
-    expect(syncTransactions).toHaveBeenCalledWith('user-1', 'la-1', 'acc-001', 'token');
+    expect(syncTransactions).toHaveBeenCalledWith('user-1', 'la-1', 'acc-001', 'fresh-token');
   });
 });
 ```
@@ -904,6 +920,8 @@ import crypto from 'crypto';
 import { buildAuthUrl, exchangeCode } from '@/truelayer/oauth';
 import { encrypt } from '@/lib/crypto';
 import { pool } from '@/db/client';
+import { getValidAccessToken } from '@/truelayer/tokens';
+import { syncAccounts } from '@/truelayer/sync';
 
 const router = Router();
 
@@ -926,12 +944,16 @@ router.get('/auth/callback', async (req, res) => {
   try {
     const tokens = await exchangeCode(code);
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-    await pool.query(
-      `UPDATE linked_accounts
-       SET access_token_enc = $1, refresh_token_enc = $2, token_expires_at = $3
-       WHERE user_id = $4`,
-      [encrypt(tokens.access_token), encrypt(tokens.refresh_token), expiresAt, userId],
+    const { rows: connRows } = await pool.query(
+      `INSERT INTO bank_connections
+         (user_id, access_token_enc, refresh_token_enc, token_expires_at)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [userId, encrypt(tokens.access_token), encrypt(tokens.refresh_token), expiresAt],
     );
+    const connectionId = connRows[0].id as string;
+    const accessToken = await getValidAccessToken(connectionId);
+    await syncAccounts(userId, connectionId, accessToken);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: String(err) });
@@ -946,31 +968,37 @@ export default router;
 ```typescript
 import { Router } from 'express';
 import { pool } from '@/db/client';
-import { decrypt } from '@/lib/crypto';
+import { getValidAccessToken } from '@/truelayer/tokens';
 import { syncAccounts, syncTransactions } from '@/truelayer/sync';
 
 const router = Router();
 
-// POST /sync/:userId — manually trigger a full sync for all linked accounts
+// POST /sync/:userId — manually trigger a full sync for all bank connections
 router.post('/sync/:userId', async (req, res) => {
   const { userId } = req.params;
-  const { rows } = await pool.query(
-    `SELECT id, external_id, access_token_enc FROM linked_accounts WHERE user_id = $1`,
+  const { rows: connections } = await pool.query(
+    `SELECT id FROM bank_connections WHERE user_id = $1`,
     [userId],
   );
-  if (rows.length === 0) { res.status(404).json({ error: 'No linked accounts' }); return; }
+  if (connections.length === 0) { res.status(404).json({ error: 'No bank connections' }); return; }
 
   try {
-    for (const acct of rows) {
-      const accessToken = decrypt(acct.access_token_enc as string);
-      await syncAccounts(userId, acct.id as string, accessToken);
-      await syncTransactions(userId, acct.id as string, acct.external_id as string, accessToken);
+    for (const conn of connections) {
+      const accessToken = await getValidAccessToken(conn.id as string);
+      await syncAccounts(userId, conn.id as string, accessToken);
+      const { rows: accounts } = await pool.query(
+        `SELECT id, external_id FROM linked_accounts WHERE connection_id = $1`,
+        [conn.id],
+      );
+      for (const acct of accounts) {
+        await syncTransactions(userId, acct.id as string, acct.external_id as string, accessToken);
+      }
     }
     await pool.query(
       `UPDATE linked_accounts SET last_synced_at = NOW() WHERE user_id = $1`,
       [userId],
     );
-    res.json({ ok: true, synced: rows.length });
+    res.json({ ok: true, synced: connections.length });
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }
@@ -1021,7 +1049,7 @@ git commit -m "feat(api): add TrueLayer OAuth callback and manual sync routes"
 
 ---
 
-### Task 7: Full suite + push
+### Task 8: Full suite + push
 
 - [ ] **Step 1: Run the full test suite**
 

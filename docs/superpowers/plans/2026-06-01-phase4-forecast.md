@@ -236,7 +236,7 @@ git commit -m "feat(api/forecast): add monthlyAverages — 6-month trailing inco
 - Create: `api/src/forecast/forecast.ts`
 - Create: `api/src/__tests__/forecast/forecast.test.ts`
 
-Imports `incomeForMonth` and `bucketSpendForMonth` from Phase 3's `api/src/lib/budget.ts`, and `getOrCreateGoal` from `api/src/lib/goals.ts`. Does NOT redefine them.
+Imports `incomeForMonth` and `bucketSpendForMonth` from Phase 3's `api/src/lib/money.ts`, and `getOrCreateGoal` from `api/src/lib/goals.ts`. Does NOT redefine them.
 
 ### Step 1: Write the failing test
 
@@ -247,7 +247,7 @@ import { computeForecast, ForecastTier } from '@/forecast/forecast';
 import { Pool } from 'pg';
 
 // --- mock Phase 3 helpers ---
-jest.mock('@/lib/budget', () => ({
+jest.mock('@/lib/money', () => ({
   incomeForMonth:      jest.fn(),
   bucketSpendForMonth: jest.fn(),
 }));
@@ -259,7 +259,7 @@ jest.mock('@/forecast/trends', () => ({
   monthlyAverages: jest.fn(),
 }));
 
-import { incomeForMonth, bucketSpendForMonth } from '@/lib/budget';
+import { incomeForMonth, bucketSpendForMonth } from '@/lib/money';
 import { getOrCreateGoal } from '@/lib/goals';
 import { monthlyAverages } from '@/forecast/trends';
 
@@ -441,7 +441,7 @@ Expected: FAIL — `Cannot find module '@/forecast/forecast'`
 
 ```typescript
 import { Pool } from 'pg';
-import { incomeForMonth, bucketSpendForMonth } from '@/lib/budget';
+import { incomeForMonth, bucketSpendForMonth } from '@/lib/money';
 import { getOrCreateGoal } from '@/lib/goals';
 import { monthlyAverages } from '@/forecast/trends';
 
@@ -476,9 +476,9 @@ export async function computeForecast(
   month: number,
 ): Promise<ForecastTier[]> {
   const [goal, income_pence, actual_pence, avgs] = await Promise.all([
-    getOrCreateGoal(pool, userId, year, month),
-    incomeForMonth(pool, userId, year, month),
-    bucketSpendForMonth(pool, userId, year, month, 'savings'),
+    getOrCreateGoal(userId, year, month),
+    incomeForMonth(userId, year, month),
+    bucketSpendForMonth(userId, 'savings', year, month),
     monthlyAverages(pool, userId),
   ]);
 
@@ -1039,33 +1039,20 @@ export default router;
 
 ### Step 4: Modify `api/src/app.ts` to mount the forecast router
 
-Read the current `app.ts` first, then add the import and mount.
-
-Current `api/src/app.ts`:
+Replace `api/src/app.ts` with the complete final version including ALL routers:
 
 ```typescript
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import healthRouter from '@/routes/health';
-
-export function createApp() {
-  const app = express();
-  app.use(helmet());
-  app.use(cors());
-  app.use(express.json());
-  app.use(healthRouter);
-  return app;
-}
-```
-
-Replace with:
-
-```typescript
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import healthRouter from '@/routes/health';
+import authRouter from '@/routes/auth';
+import syncRouter from '@/routes/sync';
+import reviewRouter from '@/routes/review';
+import dashboardRouter from '@/routes/dashboard';
+import spendingRouter from '@/routes/spending';
+import transactionsRouter from '@/routes/transactions';
+import goalsRouter from '@/routes/goals';
 import forecastRouter from '@/routes/forecast';
 
 export function createApp() {
@@ -1074,6 +1061,13 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
   app.use(healthRouter);
+  app.use(authRouter);
+  app.use(syncRouter);
+  app.use(reviewRouter);
+  app.use(dashboardRouter);
+  app.use(spendingRouter);
+  app.use(transactionsRouter);
+  app.use(goalsRouter);
   app.use(forecastRouter);
   return app;
 }
@@ -1111,6 +1105,18 @@ git commit -m "feat(api): add GET /forecast/:userId route and mount in app"
 - Create: `mobile/__tests__/forecast.test.tsx`
 
 Calls `apiGet` from `mobile/lib/api.ts` (contracts §13). Renders 4 tier cards (amount via `formatPence` from `mobile/lib/format.ts`, badge) and trend callouts. Uses `SEED_USER_ID` from `mobile/lib/currentUser.ts` (same constant as the API side, referenced from mobile). Uses plain `useEffect` + `useState` hooks (no React Query, per §13).
+
+### Step 0: Create `mobile/lib/currentUser.ts`
+
+```typescript
+export const SEED_USER_ID = '00000000-0000-0000-0000-000000000001';
+```
+
+Commit:
+```bash
+git add mobile/lib/currentUser.ts
+git commit -m "feat(mobile): add SEED_USER_ID constant for MVP auth bootstrap"
+```
 
 ### Step 1: Write the failing test
 
@@ -1293,22 +1299,26 @@ interface ForecastResponse {
 
 // ---------- Helpers ----------
 
+const BADGE_COLORS: Record<Badge, { bg: string; text: string }> = {
+  'on-track': { bg: '#0d2e1a', text: '#4ade80' },
+  'behind':   { bg: '#2d0a0a', text: '#f87171' },
+  'stretch':  { bg: '#1e1a2d', text: '#c084fc' },
+};
+
 /** Return badge background and text colour tokens for a given badge value. */
 function badgeStyle(badge: Badge): { bg: string; text: string } {
-  switch (badge) {
-    case 'on-track': return { bg: '#0d2e1a', text: '#4ade80' };
-    case 'behind':   return { bg: '#2d0a0a', text: '#f87171' };
-    case 'stretch':  return { bg: '#1e1a2d', text: '#c084fc' };
-  }
+  return BADGE_COLORS[badge];
 }
+
+const CALLOUT_ACCENTS: Record<CalloutKind, string> = {
+  consistent: '#60a5fa',
+  increasing: '#f97316',
+  suggestion: '#4ade80',
+};
 
 /** Return a left-border accent colour for a trend callout kind. */
 function calloutAccent(kind: CalloutKind): string {
-  switch (kind) {
-    case 'consistent': return '#60a5fa';
-    case 'increasing': return '#f97316';
-    case 'suggestion': return '#4ade80';
-  }
+  return CALLOUT_ACCENTS[kind];
 }
 
 // ---------- Sub-components ----------
@@ -1548,7 +1558,7 @@ git commit -m "feat(mobile): wire Forecast screen to GET /forecast API with tier
 | Mobile test with mocked api module (loading → data) | Task 5 — 7 tests |
 | `transaction_date` for all date filters | Tasks 1, 3 — SQL uses `t.transaction_date` |
 | All money fields integer pence with `_pence` suffix | Throughout — types named `*_pence`, Math.round applied |
-| Phase 3 helpers imported, not redefined | Task 2 — `import { incomeForMonth, bucketSpendForMonth }` from `@/lib/budget`; `import { getOrCreateGoal }` from `@/lib/goals` |
+| Phase 3 helpers imported, not redefined | Task 2 — `import { incomeForMonth, bucketSpendForMonth }` from `@/lib/money`; `import { getOrCreateGoal }` from `@/lib/goals` |
 
 ### Placeholder scan
 

@@ -730,7 +730,7 @@ git commit -m "feat(api): add SEED_USER_ID constant for MVP auth bootstrap"
 
 ---
 
-### Task 8: Entry point
+### Task 7: Entry point
 
 **Files:**
 - Create: `api/src/index.ts`
@@ -777,7 +777,7 @@ git commit -m "feat(api): add boot entry point (migrations → listen)"
 
 ---
 
-### Task 9: Full suite + push
+### Task 8: Full suite + push
 
 - [ ] **Step 1: Run the full test suite**
 
@@ -793,7 +793,7 @@ Expected:
  PASS  src/__tests__/lib/currentUser.test.ts
 
 Test Suites: 4 passed, 4 total
-Tests:       7 passed, 0 failed
+Tests:       9 passed, 0 failed
 ```
 
 Fix any failures before pushing.
@@ -818,7 +818,7 @@ git push origin claude/sleepy-ride-4eN6l
 - [x] Migration runner (idempotent, sorted, tracked, BEGIN/COMMIT/ROLLBACK per file) → Task 4
 - [x] Migration tests assert BEGIN is issued and ROLLBACK fires on error → Task 4
 - [x] `lib/currentUser.ts` exporting SEED_USER_ID → Task 6
-- [x] Express server with health check → Tasks 5 and 8
+- [x] Express server with health check → Tasks 5 and 7
 
 ### Placeholder scan
 No TBD, TODO, or vague instructions. Every step includes complete file content or exact commands.
