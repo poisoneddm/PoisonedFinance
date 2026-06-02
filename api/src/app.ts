@@ -9,6 +9,7 @@ import dashboardRouter from '@/routes/dashboard';
 import spendingRouter from '@/routes/spending';
 import transactionsRouter from '@/routes/transactions';
 import goalsRouter from '@/routes/goals';
+import forecastRouter from '@/routes/forecast';
 
 export function createApp() {
   const app = express();
@@ -23,5 +24,6 @@ export function createApp() {
   app.use(spendingRouter);
   app.use(transactionsRouter);
   app.use(goalsRouter);
+  app.use(forecastRouter);
   return app;
 }
