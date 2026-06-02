@@ -1,17 +1,14 @@
-import { Text, StyleSheet } from 'react-native';
-import ScreenShell from '@/components/ScreenShell';
-import { colors, spacing } from '@/constants/theme';
+import React from 'react';
+import { TransactionsScreen } from '@/screens/TransactionsScreen';
+import { SEED_USER_ID } from '@/lib/currentUser';
 
-export default function TransactionsScreen() {
+export default function TransactionsTab() {
+  const now = new Date();
   return (
-    <ScreenShell>
-      <Text style={styles.title}>Transactions</Text>
-      <Text style={styles.placeholder}>Transaction list — coming in Phase 3</Text>
-    </ScreenShell>
+    <TransactionsScreen
+      userId={SEED_USER_ID}
+      year={now.getFullYear()}
+      month={now.getMonth() + 1}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: '700', color: colors.text, paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
-  placeholder: { color: colors.textMuted, paddingHorizontal: spacing.xl, paddingTop: spacing.md, fontSize: 14 },
-});

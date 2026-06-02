@@ -1,29 +1,15 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import DashboardScreen from '@/app/(tabs)/index';
-import SpendingScreen from '@/app/(tabs)/spending';
 import ForecastScreen from '@/app/(tabs)/forecast';
-import TransactionsScreen from '@/app/(tabs)/transactions';
 import SettingsScreen from '@/app/(tabs)/settings';
 
-it('Dashboard renders greeting heading', () => {
-  render(<DashboardScreen />);
-  expect(screen.getByText('Good morning, Ryan')).toBeTruthy();
-});
-
-it('Spending renders screen heading', () => {
-  render(<SpendingScreen />);
-  expect(screen.getByText('Spending')).toBeTruthy();
-});
+// Dashboard, Spending and Transactions tabs are now thin wrappers around
+// data-fetching screens (see their dedicated tests under __tests__/screens/).
+// Only Forecast and Settings remain static stubs at this phase.
 
 it('Forecast renders screen heading', () => {
   render(<ForecastScreen />);
   expect(screen.getByText('Savings Forecast')).toBeTruthy();
-});
-
-it('Transactions renders screen heading', () => {
-  render(<TransactionsScreen />);
-  expect(screen.getByText('Transactions')).toBeTruthy();
 });
 
 it('Settings renders screen heading', () => {
