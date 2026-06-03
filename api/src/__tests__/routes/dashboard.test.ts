@@ -109,4 +109,14 @@ describe('GET /dashboard/:userId', () => {
     const res = await request(app).get(`/dashboard/${SEED_USER_ID}`);
     expect(res.status).toBe(200);
   });
+
+  it('returns 400 when month is out of range (does not silently default)', async () => {
+    const res = await request(app).get(`/dashboard/${SEED_USER_ID}?year=2026&month=13`);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when month is non-numeric', async () => {
+    const res = await request(app).get(`/dashboard/${SEED_USER_ID}?year=2026&month=abc`);
+    expect(res.status).toBe(400);
+  });
 });

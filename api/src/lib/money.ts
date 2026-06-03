@@ -11,7 +11,7 @@ export async function incomeForMonth(
   month: number,
 ): Promise<number> {
   const sql = `
-    SELECT COALESCE(SUM(t.amount_pence), 0)::integer AS income_pence
+    SELECT COALESCE(SUM(t.amount_pence), 0)::bigint AS income_pence
     FROM transactions t
     LEFT JOIN categories c ON c.id = t.category_id
     WHERE t.user_id = $1
@@ -21,7 +21,8 @@ export async function incomeForMonth(
       AND (t.category_id IS NULL OR c.meta_bucket <> 'savings')
   `;
   const { rows } = await pool.query(sql, [userId, year, month]);
-  return (rows[0]?.income_pence as number | null) ?? 0;
+  // BIGINT is returned by node-pg as a string; coerce to a JS number.
+  return Number(rows[0]?.income_pence ?? 0);
 }
 
 /**
@@ -36,7 +37,7 @@ export async function bucketSpendForMonth(
   month: number,
 ): Promise<number> {
   const sql = `
-    SELECT COALESCE(SUM(-t.amount_pence), 0)::integer AS spend_pence
+    SELECT COALESCE(SUM(-t.amount_pence), 0)::bigint AS spend_pence
     FROM transactions t
     INNER JOIN categories c ON c.id = t.category_id
     WHERE t.user_id = $1
@@ -46,5 +47,6 @@ export async function bucketSpendForMonth(
       AND EXTRACT(MONTH FROM t.transaction_date) = $4
   `;
   const { rows } = await pool.query(sql, [userId, bucket, year, month]);
-  return (rows[0]?.spend_pence as number | null) ?? 0;
+  // BIGINT is returned by node-pg as a string; coerce to a JS number.
+  return Number(rows[0]?.spend_pence ?? 0);
 }

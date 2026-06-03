@@ -53,12 +53,14 @@ Feature: Dashboard pill status colours
       | 100000      | green  |
       | 120000      | green  |
 
-  Scenario: Needs pill is red when goal is zero and there is any spending
+  # A goal of 0 disables the bucket — there is no budget to measure against,
+  # so the pill carries no status colour ("none") regardless of amount.
+  Scenario: Needs pill is none (no colour) when the goal is zero
     Given the monthly needs goal is 0 pence
     When needs spending is 1 pence
-    Then the needs pill status is "red"
+    Then the needs pill status is "none"
 
-  Scenario: Savings pill is green when goal is zero and savings is zero
+  Scenario: Savings pill is none (no colour) when the goal is zero
     Given the monthly savings goal is 0 pence
     When savings amount is 0 pence
-    Then the savings pill status is "green"
+    Then the savings pill status is "none"

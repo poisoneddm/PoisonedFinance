@@ -1,4 +1,4 @@
-export type PillLevel = 'green' | 'amber' | 'red';
+export type PillLevel = 'green' | 'amber' | 'red' | 'none';
 export type Bucket = 'needs' | 'wants' | 'savings';
 
 export function pillStatus(
@@ -7,11 +7,9 @@ export function pillStatus(
   bucket: Bucket,
 ): PillLevel {
   if (goalPence === 0) {
-    // No goal set. For savings there is no target to fall short of, so any
-    // outcome is green. For needs/wants, any spend with no budget is "over"
-    // (red); zero spend is green.
-    if (bucket === 'savings') return 'green';
-    return amountPence > 0 ? 'red' : 'green';
+    // A goal of 0 disables the bucket — there is no budget to measure against,
+    // so the pill carries no status colour ('none') regardless of amount.
+    return 'none';
   }
 
   const ratio = amountPence / goalPence;

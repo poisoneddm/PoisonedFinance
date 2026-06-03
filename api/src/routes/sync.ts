@@ -8,13 +8,13 @@ const router = Router();
 // POST /sync/:userId — manually trigger a full sync for all bank connections
 router.post('/sync/:userId', async (req, res) => {
   const { userId } = req.params;
-  const { rows: connections } = await pool.query(
-    `SELECT id FROM bank_connections WHERE user_id = $1`,
-    [userId],
-  );
-  if (connections.length === 0) { res.status(404).json({ error: 'No bank connections' }); return; }
-
   try {
+    const { rows: connections } = await pool.query(
+      `SELECT id FROM bank_connections WHERE user_id = $1`,
+      [userId],
+    );
+    if (connections.length === 0) { res.status(404).json({ error: 'No bank connections' }); return; }
+
     for (const conn of connections) {
       const accessToken = await getValidAccessToken(conn.id as string);
       await syncAccounts(userId, conn.id as string, accessToken);
@@ -32,7 +32,8 @@ router.post('/sync/:userId', async (req, res) => {
     );
     res.json({ ok: true, synced: connections.length });
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error('[sync]', err);
+    res.status(500).json({ error: 'sync failed' });
   }
 });
 

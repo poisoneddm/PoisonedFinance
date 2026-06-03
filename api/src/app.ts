@@ -11,6 +11,7 @@ import transactionsRouter from '@/routes/transactions';
 import goalsRouter from '@/routes/goals';
 import forecastRouter from '@/routes/forecast';
 import importPdfRouter from '@/routes/importPdf';
+import { errorHandler } from '@/lib/errorHandler';
 
 export function createApp() {
   const app = express();
@@ -27,5 +28,6 @@ export function createApp() {
   app.use(goalsRouter);
   app.use(forecastRouter);
   app.use(importPdfRouter);
+  app.use(errorHandler);
   return app;
 }

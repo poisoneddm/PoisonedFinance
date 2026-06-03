@@ -70,15 +70,38 @@ describe('POST /import/pdf', () => {
     expect(mockImportStatement).toHaveBeenCalledWith(SEED_USER_ID, 'statement.pdf', PARSED_TXNS);
   });
 
-  it('returns 500 when pdf-parse throws', async () => {
-    mockPdfParse.mockRejectedValueOnce(new Error('corrupted PDF'));
+  it('returns 500 with a generic message (no internal detail leak) when pdf-parse throws', async () => {
+    mockPdfParse.mockRejectedValueOnce(new Error('corrupted PDF internal stack'));
 
     const res = await request(app)
       .post('/import/pdf')
       .field('userId', SEED_USER_ID)
-      .attach('file', Buffer.from('not a pdf'), 'bad.pdf');
+      .attach('file', Buffer.from('%PDF-1.4 fake'), { filename: 'bad.pdf', contentType: 'application/pdf' });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toMatch(/corrupted PDF/);
+    expect(JSON.stringify(res.body)).not.toMatch(/corrupted PDF internal stack/);
+  });
+
+  it('returns 400 for a non-PDF upload (file type filter)', async () => {
+    const res = await request(app)
+      .post('/import/pdf')
+      .field('userId', SEED_USER_ID)
+      .attach('file', Buffer.from('not-a-pdf'), { filename: 'image.png', contentType: 'image/png' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/pdf/i);
+    expect(mockPdfParse).not.toHaveBeenCalled();
+  });
+
+  it('returns 413 when the uploaded file exceeds the size limit', async () => {
+    // Default limit is 10MB; send 11MB of "PDF" so multer rejects before parsing.
+    const big = Buffer.alloc(11 * 1024 * 1024, 0x20);
+    const res = await request(app)
+      .post('/import/pdf')
+      .field('userId', SEED_USER_ID)
+      .attach('file', big, { filename: 'huge.pdf', contentType: 'application/pdf' });
+
+    expect(res.status).toBe(413);
+    expect(mockPdfParse).not.toHaveBeenCalled();
   });
 });

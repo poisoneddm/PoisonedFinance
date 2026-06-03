@@ -98,4 +98,9 @@ describe('GET /spending/:userId', () => {
     const needsBar = res.body.goal_bars.find((b: any) => b.bucket === 'needs');
     expect(needsBar.spent_pence).toBe(80000);
   });
+
+  it('returns 400 when month is out of range', async () => {
+    const res = await request(app).get(`/spending/${SEED_USER_ID}?year=2026&month=0`);
+    expect(res.status).toBe(400);
+  });
 });

@@ -9,21 +9,31 @@ export async function applyRules(
   userId: string,
   transactions: TxnForCategorisation[],
 ): Promise<CategorizationResult[]> {
-  const results: CategorizationResult[] = [];
+  if (transactions.length === 0) return [];
 
-  for (const txn of transactions) {
-    const pattern = normaliseMerchant(txn.merchant_name, txn.description);
-    const { rows } = await pool.query<{ merchant_pattern: string; category_name: string }>(
-      `SELECT r.merchant_pattern, c.name AS category_name
-       FROM categorisation_rules r
-       JOIN categories c ON c.id = r.category_id
-       WHERE r.user_id = $1 AND r.merchant_pattern = $2`,
-      [userId, pattern],
-    );
-    if (rows.length > 0) {
-      results.push({ id: txn.id, category_name: rows[0].category_name, source: 'rule' });
+  // Normalise once, then match every transaction in a single query (no N+1).
+  const txnPatterns = transactions.map(t => ({
+    id: t.id,
+    pattern: normaliseMerchant(t.merchant_name, t.description),
+  }));
+  const distinctPatterns = [...new Set(txnPatterns.map(p => p.pattern))];
+
+  const { rows } = await pool.query<{ merchant_pattern: string; category_name: string }>(
+    `SELECT r.merchant_pattern, c.name AS category_name
+     FROM categorisation_rules r
+     JOIN categories c ON c.id = r.category_id
+     WHERE r.user_id = $1 AND r.merchant_pattern = ANY($2)`,
+    [userId, distinctPatterns],
+  );
+
+  const categoryByPattern = new Map(rows.map(r => [r.merchant_pattern, r.category_name]));
+
+  const results: CategorizationResult[] = [];
+  for (const { id, pattern } of txnPatterns) {
+    const categoryName = categoryByPattern.get(pattern);
+    if (categoryName) {
+      results.push({ id, category_name: categoryName, source: 'rule' });
     }
   }
-
   return results;
 }

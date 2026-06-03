@@ -17,8 +17,8 @@ describe('pillStatus — needs bucket (lower is better)', () => {
   it('ratio 0.99 → amber (just below 100%)', () => expect_status(990, 1000, 'needs', 'amber'));
   it('ratio 1.0 → red (100% is over)', () => expect_status(1000, 1000, 'needs', 'red'));
   it('ratio over 1.0 → red', () => expect_status(1500, 1000, 'needs', 'red'));
-  it('goal=0 amount=0 → green (ratio=0)', () => expect_status(0, 0, 'needs', 'green'));
-  it('goal=0 amount>0 → red (ratio=Infinity)', () => expect_status(1, 0, 'needs', 'red'));
+  it('goal=0 amount=0 → none (goal disabled)', () => expect_status(0, 0, 'needs', 'none'));
+  it('goal=0 amount>0 → none (goal disabled)', () => expect_status(1, 0, 'needs', 'none'));
 });
 
 describe('pillStatus — wants bucket (lower is better)', () => {
@@ -27,8 +27,8 @@ describe('pillStatus — wants bucket (lower is better)', () => {
   it('ratio 0.99 → amber', () => expect_status(990, 1000, 'wants', 'amber'));
   it('ratio 1.0 → red', () => expect_status(1000, 1000, 'wants', 'red'));
   it('ratio over 1.0 → red', () => expect_status(2000, 1000, 'wants', 'red'));
-  it('goal=0 amount=0 → green', () => expect_status(0, 0, 'wants', 'green'));
-  it('goal=0 amount>0 → red', () => expect_status(50, 0, 'wants', 'red'));
+  it('goal=0 amount=0 → none (goal disabled)', () => expect_status(0, 0, 'wants', 'none'));
+  it('goal=0 amount>0 → none (goal disabled)', () => expect_status(50, 0, 'wants', 'none'));
 });
 
 describe('pillStatus — savings bucket (higher is better)', () => {
@@ -38,6 +38,16 @@ describe('pillStatus — savings bucket (higher is better)', () => {
   it('ratio 0.89 → amber (just below 90%)', () => expect_status(890, 1000, 'savings', 'amber'));
   it('ratio 0.9 → green (90% boundary)', () => expect_status(900, 1000, 'savings', 'green'));
   it('ratio over 0.9 → green', () => expect_status(1200, 1000, 'savings', 'green'));
-  it('goal=0 amount=0 → green (ratio=0 treated as 0, savings 0/0 = no shortfall)', () => expect_status(0, 0, 'savings', 'green'));
-  it('goal=0 amount>0 → green (Infinity ≥ 0.9)', () => expect_status(500, 0, 'savings', 'green'));
+  it('goal=0 amount=0 → none (goal disabled)', () => expect_status(0, 0, 'savings', 'none'));
+  it('goal=0 amount>0 → none (goal disabled)', () => expect_status(500, 0, 'savings', 'none'));
+});
+
+describe('pillStatus — goal disabled (goal=0) returns none for every bucket', () => {
+  const buckets: Bucket[] = ['needs', 'wants', 'savings'];
+  for (const bucket of buckets) {
+    it(`${bucket}: goal=0 → none regardless of amount`, () => {
+      expect(pillStatus(0, 0, bucket)).toBe('none');
+      expect(pillStatus(99999, 0, bucket)).toBe('none');
+    });
+  }
 });

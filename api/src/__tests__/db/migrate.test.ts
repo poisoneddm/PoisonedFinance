@@ -1,7 +1,11 @@
 import path from 'path';
 
 const mockQuery = jest.fn();
-jest.mock('@/db/client', () => ({ pool: { query: mockQuery } }));
+const mockRelease = jest.fn();
+// Each migration runs on a single checked-out client (pool.connect()); the
+// client delegates to the same mockQuery so existing call-based assertions hold.
+const mockConnect = jest.fn(async () => ({ query: mockQuery, release: mockRelease }));
+jest.mock('@/db/client', () => ({ pool: { query: mockQuery, connect: mockConnect } }));
 
 // Provide two fake migration files
 jest.mock('fs', () => ({
@@ -13,6 +17,8 @@ import { runMigrations } from '@/db/migrate';
 
 beforeEach(() => {
   mockQuery.mockReset();
+  mockRelease.mockReset();
+  mockConnect.mockClear();
   // Default: _migrations table already exists, files not yet run
   mockQuery.mockResolvedValue({ rows: [] });
   // Clear fs mock call counts between tests (implementations are preserved)
@@ -62,6 +68,26 @@ it('issues BEGIN before running each migration', async () => {
   await runMigrations();
   const calls = (mockQuery.mock.calls as [string, ...unknown[]][]).map(c => c[0]);
   expect(calls).toContain('BEGIN');
+});
+
+it('runs each migration on a single checked-out client and releases it', async () => {
+  await runMigrations();
+  // Two migration files → one connect()/release() per file (atomic per file).
+  expect(mockConnect).toHaveBeenCalledTimes(2);
+  expect(mockRelease).toHaveBeenCalledTimes(2);
+  const calls = (mockQuery.mock.calls as [string, ...unknown[]][]).map(c => c[0]);
+  // BEGIN and COMMIT both issued (on the pinned client).
+  expect(calls).toContain('BEGIN');
+  expect(calls).toContain('COMMIT');
+});
+
+it('releases the client even when a migration fails', async () => {
+  mockQuery.mockImplementation(async (sql: string) => {
+    if (sql.includes('-- content of')) throw new Error('boom');
+    return { rows: [] };
+  });
+  await expect(runMigrations()).rejects.toThrow('boom');
+  expect(mockRelease).toHaveBeenCalled();
 });
 
 it('rolls back and rethrows when a migration SQL errors', async () => {

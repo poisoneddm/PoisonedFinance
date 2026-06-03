@@ -22,6 +22,22 @@ describe('incomeForMonth', () => {
     expect(result).toBe(0);
   });
 
+  it('parses bigint sums returned as strings (no int4 overflow)', async () => {
+    // node-pg returns BIGINT columns as strings; a sum above 2^31 pence
+    // (~£21.4M) would overflow an int4 cast, so the SUM is cast to BIGINT.
+    mockQuery.mockResolvedValueOnce({ rows: [{ income_pence: '5000000000' }] });
+    const result = await incomeForMonth(SEED_USER_ID, 2026, 6);
+    expect(result).toBe(5000000000);
+  });
+
+  it('sums to BIGINT (not INTEGER) to avoid overflow', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ income_pence: 0 }] });
+    await incomeForMonth(SEED_USER_ID, 2026, 6);
+    const sql: string = mockQuery.mock.calls[0][0];
+    expect(sql).toMatch(/::bigint/i);
+    expect(sql).not.toMatch(/::integer/i);
+  });
+
   it('queries WHERE amount_pence > 0 and correct year/month on transaction_date', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ income_pence: 0 }] });
     await incomeForMonth(SEED_USER_ID, 2026, 6);
@@ -53,6 +69,12 @@ describe('bucketSpendForMonth', () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ spend_pence: null }] });
     const result = await bucketSpendForMonth(SEED_USER_ID, 'wants', 2026, 6);
     expect(result).toBe(0);
+  });
+
+  it('parses bigint spend sums returned as strings (no int4 overflow)', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ spend_pence: '3000000000' }] });
+    const result = await bucketSpendForMonth(SEED_USER_ID, 'needs', 2026, 6);
+    expect(result).toBe(3000000000);
   });
 
   it('queries WHERE amount_pence < 0 and uses -amount_pence SUM', async () => {

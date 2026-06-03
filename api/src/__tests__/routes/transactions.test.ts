@@ -97,4 +97,10 @@ describe('GET /transactions/:userId', () => {
     expect(sql).toContain('transaction_date');
     expect(sql).not.toContain('posted_date');
   });
+
+  it('returns 400 when month is out of range', async () => {
+    const res = await request(app)
+      .get(`/transactions/${SEED_USER_ID}?year=2026&month=99`);
+    expect(res.status).toBe(400);
+  });
 });

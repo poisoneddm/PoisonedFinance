@@ -62,7 +62,7 @@ defineFeature(feature, test => {
     });
   });
 
-  test('Needs pill is red when goal is zero and there is any spending', ({ given, when, then }) => {
+  test('Needs pill is none (no colour) when the goal is zero', ({ given, when, then }) => {
     let goalPence: number;
     let spentPence: number;
 
@@ -79,7 +79,7 @@ defineFeature(feature, test => {
     });
   });
 
-  test('Savings pill is green when goal is zero and savings is zero', ({ given, when, then }) => {
+  test('Savings pill is none (no colour) when the goal is zero', ({ given, when, then }) => {
     let goalPence: number;
     let savedPence: number;
 
