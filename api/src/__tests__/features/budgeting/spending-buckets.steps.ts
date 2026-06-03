@@ -145,6 +145,22 @@ defineFeature(feature, test => {
     });
   });
 
+  test("A refund (credit) in a spend category reduces that bucket's spend", ({ given, and, when, then }) => {
+    background(given, and);
+    given(/^a credit refund from Tesco of amount_pence \+?(\d+) categorised as (.+) in May 2026$/, async (
+      amount: string,
+      category: string,
+    ) => {
+      await insertTxn('Tesco Refund', category, Number(amount), '2026-05-18', 'refund-1');
+    });
+    when('I request spending for May 2026', async () => {
+      res = await request(app).get(`/spending/${USER}?year=2026&month=5`);
+    });
+    then(/^the needs total_pence is (\d+)$/, (v: string) => {
+      expect(res.body.goal_bars.find((b: { bucket: string }) => b.bucket === 'needs').spent_pence).toBe(Number(v));
+    });
+  });
+
   test('transaction_date boundary — transaction posted in May but dated April is excluded', ({ given, and, when, then }) => {
     background(given, and);
     given(/^a transaction with transaction_date "(.*)" and posted_date "(.*)" categorised as (.*)$/, async (

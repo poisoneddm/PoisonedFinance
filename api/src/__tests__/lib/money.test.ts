@@ -50,11 +50,11 @@ describe('incomeForMonth', () => {
     expect(params).toContain(6);
   });
 
-  it('excludes savings meta_bucket credits', async () => {
+  it('counts only uncategorised credits as income (categorised credits are refunds)', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ income_pence: 0 }] });
     await incomeForMonth(SEED_USER_ID, 2026, 6);
     const sql: string = mockQuery.mock.calls[0][0];
-    expect(sql).toContain("meta_bucket <> 'savings'");
+    expect(sql).toContain('category_id IS NULL');
   });
 });
 
@@ -77,12 +77,12 @@ describe('bucketSpendForMonth', () => {
     expect(result).toBe(3000000000);
   });
 
-  it('queries WHERE amount_pence < 0 and uses -amount_pence SUM', async () => {
+  it('nets debits and credits with SUM(-amount_pence) — no debit-only filter (refunds reduce spend)', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ spend_pence: 0 }] });
     await bucketSpendForMonth(SEED_USER_ID, 'needs', 2026, 6);
     const sql: string = mockQuery.mock.calls[0][0];
-    expect(sql).toContain('amount_pence < 0');
     expect(sql).toMatch(/-t\.amount_pence/);
+    expect(sql).not.toContain('amount_pence < 0');
     expect(sql).toContain('transaction_date');
     expect(sql).not.toContain('posted_date');
   });
