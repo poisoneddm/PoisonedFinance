@@ -5,7 +5,7 @@ const mockApplyRules = jest.fn();
 jest.mock('@/categorisation/rules', () => ({ applyRules: mockApplyRules }));
 
 const mockBatchCategorise = jest.fn();
-jest.mock('@/categorisation/claude', () => ({ batchCategorise: mockBatchCategorise }));
+jest.mock('@/categorisation/ai', () => ({ batchCategorise: mockBatchCategorise }));
 
 // Import the unit under test AFTER mocks are declared (avoid mock-factory TDZ).
 import { runPipeline } from '@/categorisation/pipeline';
