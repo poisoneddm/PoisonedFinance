@@ -38,6 +38,16 @@ export default function RootLayout() {
             headerTintColor: colors.text,
           }}
         />
+        <Stack.Screen
+          name="income"
+          options={{
+            presentation: 'fullScreenModal',
+            headerShown: true,
+            title: 'Expected Income',
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.text,
+          }}
+        />
       </Stack>
     </>
   );

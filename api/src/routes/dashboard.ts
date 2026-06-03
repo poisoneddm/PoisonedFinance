@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getOrCreateGoal } from '@/lib/goals';
-import { incomeForMonth, bucketSpendForMonth } from '@/lib/money';
+import { bucketSpendForMonth } from '@/lib/money';
+import { expectedIncomeForMonth } from '@/lib/income';
 import { pillStatus, Bucket } from '@/lib/pillStatus';
 import { pool } from '@/db/client';
 import { MetaBucket } from '@/types/index';
@@ -17,7 +18,7 @@ router.get('/dashboard/:userId', async (req: Request, res: Response) => {
 
     const [goal, income] = await Promise.all([
       getOrCreateGoal(userId, year, month),
-      incomeForMonth(userId, year, month),
+      expectedIncomeForMonth(userId, year, month),
     ]);
 
     const buckets: MetaBucket[] = ['needs', 'wants', 'savings'];
@@ -31,8 +32,10 @@ router.get('/dashboard/:userId', async (req: Request, res: Response) => {
       buckets.map(b => bucketSpendForMonth(userId, b, year, month)),
     );
 
+    // Budget targets use EXPECTED income so the plan is stable from day 1, even
+    // before salaries land (see lib/income.ts).
     const pills = buckets.map((b, i) => {
-      const goal_pence = Math.round((income * pctMap[b]) / 100);
+      const goal_pence = Math.round((income.expected_pence * pctMap[b]) / 100);
       const spent_pence = spends[i];
       return {
         bucket: b,
@@ -70,7 +73,9 @@ router.get('/dashboard/:userId', async (req: Request, res: Response) => {
     );
 
     res.json({
-      income_pence: income,
+      income_pence: income.actual_pence,
+      expected_income_pence: income.expected_pence,
+      income_source: income.source,
       pills,
       review_count,
       recent: recentResult.rows,

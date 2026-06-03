@@ -153,10 +153,18 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Budget</Text>
         <Text style={styles.sectionHint}>
-          Set how your income splits across Needs, Wants, and Savings.
+          Set your expected monthly income and how it splits across Needs, Wants, and Savings.
         </Text>
         <TouchableOpacity
           style={[styles.buttonSecondary, busy && styles.buttonDisabled]}
+          onPress={() => router.push('/income')}
+          disabled={busy}
+          accessibilityLabel="Edit expected income"
+        >
+          <Text style={styles.buttonSecondaryText}>Expected income</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.buttonSecondary, styles.buttonStacked, busy && styles.buttonDisabled]}
           onPress={() => router.push('/goals')}
           disabled={busy}
           accessibilityLabel="Edit budget split"
@@ -238,6 +246,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
+  },
+  buttonStacked: {
+    marginTop: spacing.md,
   },
   buttonSecondaryText: {
     color: colors.purpleLight,
