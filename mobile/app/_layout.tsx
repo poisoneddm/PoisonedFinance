@@ -28,6 +28,16 @@ export default function RootLayout() {
             headerTintColor: colors.text,
           }}
         />
+        <Stack.Screen
+          name="goals"
+          options={{
+            presentation: 'fullScreenModal',
+            headerShown: true,
+            title: 'Budget Split',
+            headerStyle: { backgroundColor: colors.surface },
+            headerTintColor: colors.text,
+          }}
+        />
       </Stack>
     </>
   );
