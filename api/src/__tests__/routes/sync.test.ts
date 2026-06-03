@@ -23,6 +23,12 @@ describe('POST /sync/:userId', () => {
     expect(res.status).toBe(404);
   });
 
+  it('returns 500 (not a hung request) when the initial connections query rejects', async () => {
+    mockQuery.mockRejectedValueOnce(new Error('db down')); // SELECT bank_connections fails
+    const res = await request(app).post('/sync/user-1');
+    expect(res.status).toBe(500);
+  });
+
   it('returns 200 and syncs each account', async () => {
     mockQuery
       .mockResolvedValueOnce({ rows: [{ id: 'conn-1' }] })                        // SELECT bank_connections

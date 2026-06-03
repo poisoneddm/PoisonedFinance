@@ -1,19 +1,20 @@
 import { Router } from 'express';
-import crypto from 'crypto';
 import { buildAuthUrl, exchangeCode } from '@/truelayer/oauth';
 import { encrypt } from '@/lib/crypto';
 import { pool } from '@/db/client';
 import { getValidAccessToken } from '@/truelayer/tokens';
 import { syncAccounts } from '@/truelayer/sync';
+import { issueState, consumeState } from '@/lib/oauthState';
 
 const router = Router();
 
 // GET /auth/truelayer?userId=<uuid>
-// Redirects user to TrueLayer consent screen. userId is passed as state.
+// Redirects user to TrueLayer consent screen. A single-use, server-stored nonce
+// is bound to userId and round-tripped as `state` for CSRF protection.
 router.get('/auth/truelayer', (req, res) => {
   const userId = req.query.userId as string;
   if (!userId) { res.status(400).json({ error: 'userId required' }); return; }
-  const state = `${userId}:${crypto.randomBytes(8).toString('hex')}`;
+  const state = issueState(userId);
   res.redirect(buildAuthUrl(state));
 });
 
@@ -23,7 +24,11 @@ router.get('/auth/callback', async (req, res) => {
   const state = req.query.state as string | undefined;
   if (!code || !state) { res.status(400).json({ error: 'code and state required' }); return; }
 
-  const userId = state.split(':')[0];
+  // Validate state against the server-side store. userId comes from the store,
+  // never from the (attacker-controllable) state string.
+  const userId = consumeState(state);
+  if (!userId) { res.status(403).json({ error: 'invalid or expired state' }); return; }
+
   try {
     const tokens = await exchangeCode(code);
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
@@ -39,7 +44,8 @@ router.get('/auth/callback', async (req, res) => {
     await syncAccounts(userId, connectionId, accessToken);
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error('[auth/callback]', err);
+    res.status(500).json({ error: 'authentication callback failed' });
   }
 });
 

@@ -62,6 +62,44 @@ describe('syncTransactions', () => {
     expect(upsertCall![1]).toContain(-6742);
   });
 
+  it('stores a CREDIT as positive pence', async () => {
+    const credit: TrueLayerTransaction = {
+      ...TRANSACTION,
+      transaction_id: 'txn-credit',
+      transaction_type: 'CREDIT',
+      amount: 1500.0,
+    };
+    mockFetch.mockResolvedValueOnce({ results: [credit], status: 'Succeeded' });
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    await syncTransactions('user-1', 'linked-acc-id-1', 'acc-001', 'access-token');
+
+    const upsertCall = mockQuery.mock.calls.find(c =>
+      typeof c[0] === 'string' && c[0].includes('ON CONFLICT'),
+    )!;
+    expect(upsertCall[1]).toContain(150000);
+  });
+
+  it('stores a DEBIT as negative pence even when the API sends a positive magnitude', async () => {
+    // Real TrueLayer returns `amount` as a positive magnitude with direction in
+    // `transaction_type`; the sign must come from transaction_type, not amount.
+    const debit: TrueLayerTransaction = {
+      ...TRANSACTION,
+      transaction_id: 'txn-debit-positive',
+      transaction_type: 'DEBIT',
+      amount: 67.42, // positive magnitude
+    };
+    mockFetch.mockResolvedValueOnce({ results: [debit], status: 'Succeeded' });
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    await syncTransactions('user-1', 'linked-acc-id-1', 'acc-001', 'access-token');
+
+    const upsertCall = mockQuery.mock.calls.find(c =>
+      typeof c[0] === 'string' && c[0].includes('ON CONFLICT'),
+    )!;
+    expect(upsertCall[1]).toContain(-6742);
+  });
+
   it('uses transaction_date from meta.transaction_time when available', async () => {
     const txnWithMeta: TrueLayerTransaction = {
       ...TRANSACTION,

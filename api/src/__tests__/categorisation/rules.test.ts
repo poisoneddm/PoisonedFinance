@@ -41,12 +41,36 @@ describe('applyRules', () => {
     expect(results).toHaveLength(0);
   });
 
-  it('queries using the normalised merchant name', async () => {
+  it('queries using the normalised merchant name (as an array of patterns)', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [] });
     await applyRules('user-1', [TXN('  amazon mktplace  ')]);
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.arrayContaining(['user-1', 'AMAZON MKTPLACE']),
-    );
+    const params = mockQuery.mock.calls[0][1] as unknown[];
+    expect(params[0]).toBe('user-1');
+    expect(params[1]).toEqual(['AMAZON MKTPLACE']);
+  });
+
+  it('matches multiple transactions in a SINGLE query (no N+1)', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        { merchant_pattern: 'TESCO', category_name: 'Groceries' },
+        { merchant_pattern: 'AMAZON', category_name: 'Shopping' },
+      ],
+    });
+    const results = await applyRules('user-1', [
+      { id: 'a', merchant_name: 'Tesco', description: 'x' },
+      { id: 'b', merchant_name: 'Amazon', description: 'y' },
+      { id: 'c', merchant_name: 'Unknown', description: 'z' },
+    ]);
+    expect(mockQuery).toHaveBeenCalledTimes(1); // one query for all txns
+    expect(results).toEqual([
+      { id: 'a', category_name: 'Groceries', source: 'rule' },
+      { id: 'b', category_name: 'Shopping', source: 'rule' },
+    ]);
+  });
+
+  it('returns empty array (and issues no query) for an empty transaction list', async () => {
+    const results = await applyRules('user-1', []);
+    expect(results).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });

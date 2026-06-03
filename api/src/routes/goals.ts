@@ -1,15 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { getOrCreateGoal } from '@/lib/goals';
 import { pool } from '@/db/client';
+import { resolvePeriod } from '@/lib/period';
 
 const router = Router();
 
 router.get('/goals/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const now = new Date();
-    const year = parseInt(req.query.year as string, 10) || now.getFullYear();
-    const month = parseInt(req.query.month as string, 10) || (now.getMonth() + 1);
+    const period = resolvePeriod(req.query.year as string | undefined, req.query.month as string | undefined);
+    if (!period.ok) { res.status(400).json({ error: period.error }); return; }
+    const { year, month } = period.period;
     const goal = await getOrCreateGoal(userId, year, month);
     res.json(goal);
   } catch (err) {
@@ -28,6 +29,19 @@ router.put('/goals/:userId', async (req: Request, res: Response) => {
       wants_pct: number;
       savings_pct: number;
     };
+
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+      res.status(400).json({ error: 'year and month must be integers; month must be 1–12' });
+      return;
+    }
+
+    const pcts = [needs_pct, wants_pct, savings_pct];
+    if (pcts.some(p => !Number.isInteger(p) || p < 0 || p > 100)) {
+      res.status(400).json({
+        error: 'needs_pct, wants_pct, and savings_pct must be integers between 0 and 100',
+      });
+      return;
+    }
 
     if (needs_pct + wants_pct + savings_pct !== 100) {
       res.status(400).json({

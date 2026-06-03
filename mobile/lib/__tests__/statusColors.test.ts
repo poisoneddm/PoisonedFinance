@@ -20,8 +20,15 @@ describe('statusColors', () => {
     expect(result.text).toBe('#f87171');
   });
 
+  it('none → neutral (disabled) background and muted text', () => {
+    const result: StatusColorResult = statusColors('none');
+    // A disabled goal carries no status colour — neutral surface + muted text.
+    expect(result.bg).toBe('#16161e');
+    expect(result.text).toBe('#888888');
+  });
+
   it('returns a result with bg and text hex strings for all PillLevel values', () => {
-    const levels: PillLevel[] = ['green', 'amber', 'red'];
+    const levels: PillLevel[] = ['green', 'amber', 'red', 'none'];
     for (const level of levels) {
       const result = statusColors(level);
       expect(result).toHaveProperty('bg');

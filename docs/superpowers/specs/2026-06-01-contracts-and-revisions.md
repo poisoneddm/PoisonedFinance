@@ -121,22 +121,25 @@ goal_pence(bucket) = ROUND(income_pence * bucket_pct / 100)
 `api/src/lib/pillStatus.ts`:
 
 ```typescript
-export type PillLevel = 'green' | 'amber' | 'red';
+export type PillLevel = 'green' | 'amber' | 'red' | 'none';
 export type Bucket = 'needs' | 'wants' | 'savings';
 
 export function pillStatus(amountPence: number, goalPence: number, bucket: Bucket): PillLevel
 ```
 
-Rules (ratio = amount / goal; if goal == 0 → treat ratio as Infinity when amount > 0, else 0):
+Rules:
 
-- **needs / wants** (spend — lower is better): ratio < 0.5 → `green`; 0.5 ≤ ratio < 1.0 → `amber`; ratio ≥ 1.0 → `red`.
-- **savings** (reversed — higher is better): ratio ≥ 0.9 → `green`; 0.5 ≤ ratio < 0.9 → `amber`; ratio < 0.5 → `red`.
+- **goal == 0 (disabled)**: a goal of 0 disables the bucket — there is no budget to measure against, so the pill carries no status colour and returns `none` for every bucket, regardless of amount.
+- For a non-zero goal, ratio = amount / goal:
+  - **needs / wants** (spend — lower is better): ratio < 0.5 → `green`; 0.5 ≤ ratio < 1.0 → `amber`; ratio ≥ 1.0 → `red`.
+  - **savings** (reversed — higher is better): ratio ≥ 0.9 → `green`; 0.5 ≤ ratio < 0.9 → `amber`; ratio < 0.5 → `red`.
 
 Mobile maps `PillLevel` → colours via `theme.ts`:
 ```
 green → bg pillGreenBg, text green
 amber → bg pillAmberBg, text amber
 red   → bg pillRedBg,   text red
+none  → bg surface,     text textMuted   (goal disabled)
 ```
 
 ---

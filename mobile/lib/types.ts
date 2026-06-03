@@ -1,1 +1,1 @@
-export type PillLevel = 'green' | 'amber' | 'red';
+export type PillLevel = 'green' | 'amber' | 'red' | 'none';

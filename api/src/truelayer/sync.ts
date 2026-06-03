@@ -47,7 +47,11 @@ export async function syncTransactions(
     const transactionDate = txn.meta?.transaction_time
       ? txn.meta.transaction_time.slice(0, 10)
       : postedDate;
-    const amountPence = Math.round(txn.amount * 100);
+    // TrueLayer returns `amount` as a positive magnitude with direction carried
+    // in `transaction_type`. Derive the sign from transaction_type so debits are
+    // stored negative and credits positive, regardless of the amount's sign.
+    const magnitude = Math.round(Math.abs(txn.amount) * 100);
+    const amountPence = txn.transaction_type === 'DEBIT' ? -magnitude : magnitude;
 
     const { rows } = await pool.query<{ id: string }>(
       `INSERT INTO transactions

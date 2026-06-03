@@ -44,6 +44,12 @@ describe('GET /goals/:userId', () => {
     await request(app).get(`/goals/${SEED_USER_ID}?year=2026&month=6`);
     expect(mockGetOrCreateGoal).toHaveBeenCalledWith(SEED_USER_ID, 2026, 6);
   });
+
+  it('returns 400 when month is out of range and does not call getOrCreateGoal', async () => {
+    const res = await request(app).get(`/goals/${SEED_USER_ID}?year=2026&month=13`);
+    expect(res.status).toBe(400);
+    expect(mockGetOrCreateGoal).not.toHaveBeenCalled();
+  });
 });
 
 describe('PUT /goals/:userId', () => {
@@ -77,6 +83,36 @@ describe('PUT /goals/:userId', () => {
       .put(`/goals/${SEED_USER_ID}`)
       .send({ year: 2026, month: 6, needs_pct: 41, wants_pct: 20, savings_pct: 40 });
     expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when a percentage is negative (even if sum is 100)', async () => {
+    const res = await request(app)
+      .put(`/goals/${SEED_USER_ID}`)
+      .send({ year: 2026, month: 6, needs_pct: 150, wants_pct: -50, savings_pct: 0 });
+    expect(res.status).toBe(400);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when a percentage is non-integer', async () => {
+    const res = await request(app)
+      .put(`/goals/${SEED_USER_ID}`)
+      .send({ year: 2026, month: 6, needs_pct: 40.5, wants_pct: 19.5, savings_pct: 40 });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when month is out of range', async () => {
+    const res = await request(app)
+      .put(`/goals/${SEED_USER_ID}`)
+      .send({ year: 2026, month: 13, needs_pct: 40, wants_pct: 20, savings_pct: 40 });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when year or month is missing', async () => {
+    const res = await request(app)
+      .put(`/goals/${SEED_USER_ID}`)
+      .send({ needs_pct: 40, wants_pct: 20, savings_pct: 40 });
+    expect(res.status).toBe(400);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 
   it('upserts the goal row in monthly_goals', async () => {
