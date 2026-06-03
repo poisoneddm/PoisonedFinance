@@ -1,6 +1,6 @@
 import { pool } from '@/db/client';
 import { applyRules } from './rules';
-import { batchCategorise } from './claude';
+import { batchCategorise } from './ai';
 import type { TxnForCategorisation } from './types';
 
 /** Load the category name→id map once (categories are a small fixed seed set). */
