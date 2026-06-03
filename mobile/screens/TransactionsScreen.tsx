@@ -5,6 +5,7 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import { useMonthData } from '@/hooks/useMonthData';
 import { formatPence } from '@/lib/format';
@@ -29,6 +30,8 @@ interface TransactionsScreenProps {
   account?: string;
   bucket?: string;
   q?: string;
+  /** Called when a transaction row is tapped (wired by the tab to open the category editor). */
+  onTransactionPress?: (txn: Transaction) => void;
 }
 
 export function TransactionsScreen({
@@ -38,6 +41,7 @@ export function TransactionsScreen({
   account,
   bucket,
   q,
+  onTransactionPress,
 }: TransactionsScreenProps) {
   const state = useMonthData<Transaction[]>(
     (u, y, m) => {
@@ -83,7 +87,12 @@ export function TransactionsScreen({
         </Text>
       }
       renderItem={({ item }) => (
-        <View style={styles.row}>
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => onTransactionPress?.(item)}
+          disabled={!onTransactionPress}
+          accessibilityLabel={`Edit category for ${item.merchant_name ?? item.description}`}
+        >
           <View style={styles.rowLeft}>
             <Text style={styles.merchant}>
               {item.merchant_name ?? item.description}
@@ -109,7 +118,7 @@ export function TransactionsScreen({
           >
             {formatPence(item.amount_pence)}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
     />
   );
