@@ -5,6 +5,7 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import { useMonthData } from '@/hooks/useMonthData';
 import { formatPence } from '@/lib/format';
@@ -39,9 +40,11 @@ interface DashboardScreenProps {
   userId: string;
   year: number;
   month: number;
+  /** Called when the review-queue alert is tapped (wired by the tab to open /review). */
+  onReviewPress?: () => void;
 }
 
-export function DashboardScreen({ userId, year, month }: DashboardScreenProps) {
+export function DashboardScreen({ userId, year, month, onReviewPress }: DashboardScreenProps) {
   const state = useMonthData<DashboardData>(
     (u, y, m) => `/dashboard/${u}?year=${y}&month=${m}`,
     userId,
@@ -73,7 +76,11 @@ export function DashboardScreen({ userId, year, month }: DashboardScreenProps) {
       <Text style={styles.incomeAmount}>{formatPence(income_pence)}</Text>
 
       {review_count > 0 && (
-        <Text style={styles.reviewAlert}>{review_count} transactions need review</Text>
+        <TouchableOpacity onPress={onReviewPress} disabled={!onReviewPress} accessibilityLabel="Open review queue">
+          <Text style={styles.reviewAlert}>
+            {review_count} transaction{review_count === 1 ? '' : 's'} need review ›
+          </Text>
+        </TouchableOpacity>
       )}
 
       <View style={styles.pillsRow}>
