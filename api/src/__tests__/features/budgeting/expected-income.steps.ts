@@ -57,15 +57,23 @@ defineFeature(feature, test => {
     return accountId;
   }
 
-  async function seedIncome(amount: number, monthName: string): Promise<void> {
+  async function seedIncome(amount: number, monthName: string, categoryName?: string): Promise<void> {
     const m = MONTHS[monthName];
     const date = `2026-${String(m).padStart(2, '0')}-15`;
+    let categoryId: string | null = null;
+    if (categoryName) {
+      const { rows } = await world.query<{ id: string }>(
+        `SELECT id FROM categories WHERE name = $1`,
+        [categoryName],
+      );
+      categoryId = rows[0].id;
+    }
     await world.query(
       `INSERT INTO transactions
          (account_id, user_id, external_id, merchant_name, description,
-          amount_pence, currency, transaction_date, posted_date, needs_review)
-       VALUES ($1, $2, $3, 'EMPLOYER', 'SALARY', $4, 'GBP', $5, $5, FALSE)`,
-      [await account(), USER, `inc-${monthName}`, amount, date],
+          amount_pence, currency, transaction_date, posted_date, category_id, needs_review)
+       VALUES ($1, $2, $3, 'EMPLOYER', 'SALARY', $4, 'GBP', $5, $5, $6, FALSE)`,
+      [await account(), USER, `inc-${monthName}-${categoryName ?? 'none'}`, amount, date, categoryId],
     );
   }
 
@@ -135,6 +143,23 @@ defineFeature(feature, test => {
       res = await request(app).put(`/income/${USER}`).send({ year: 2026, month: MONTHS[monthName], expected_pence: null });
     });
     then(/^the expected income is (\d+) with source "(\w+)"$/, (amount: string, source: string) => {
+      expect(res.body.expected_pence).toBe(Number(amount));
+      expect(res.body.source).toBe(source);
+    });
+  });
+
+  test('A credit tagged with the Income category still counts as income', ({ given, when, then, and }) => {
+    seededUser(given);
+    given(/^a credit of (\d+) pence in (\w+) 2026 tagged "(\w+)"$/, async (amount: string, monthName: string, category: string) => {
+      await seedIncome(Number(amount), monthName, category);
+    });
+    when(/^I request income for (\w+) 2026$/, async (monthName: string) => {
+      res = await request(app).get(`/income/${USER}?year=2026&month=${MONTHS[monthName]}`);
+    });
+    then(/^the actual income is (\d+)$/, (v: string) => {
+      expect(res.body.actual_pence).toBe(Number(v));
+    });
+    and(/^the expected income is (\d+) with source "(\w+)"$/, (amount: string, source: string) => {
       expect(res.body.expected_pence).toBe(Number(amount));
       expect(res.body.source).toBe(source);
     });

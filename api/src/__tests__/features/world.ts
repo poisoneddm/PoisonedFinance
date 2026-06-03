@@ -16,6 +16,11 @@ function preprocessMigration(sql: string): string {
     sql
       // pg-mem does not support CREATE EXTENSION
       .replace(/CREATE\s+EXTENSION[^;]+;/gi, '')
+      // pg-mem cannot model constraint DDL; drop standalone ALTER ... CONSTRAINT
+      // statements wholesale (real Postgres applies them via migrate.ts). Done
+      // before the CHECK strip below so the whole statement is removed cleanly.
+      .replace(/ALTER\s+TABLE\s+\w+\s+DROP\s+CONSTRAINT[^;]*;/gi, '')
+      .replace(/ALTER\s+TABLE\s+\w+\s+ADD\s+CONSTRAINT[^;]*;/gi, '')
       // pg-mem v2.9 treats nullable IN-check constraints as violated on NULL.
       // Strip all CHECK clauses (CONSTRAINT name CHECK (...) or inline CHECK (...)).
       // Handles one level of nesting inside the outer parens.

@@ -16,11 +16,12 @@ import { colors, spacing, radius } from '@/constants/theme';
 import { ReviewTransaction, MetaBucket } from '@/lib/types';
 
 /** Meta-bucket accent colour for the suggested-category dot. */
-function bucketColor(bucket: MetaBucket | null): string {
+function bucketColor(bucket: MetaBucket | 'income' | null): string {
   switch (bucket) {
     case 'needs': return colors.needs;
     case 'wants': return colors.wants;
     case 'savings': return colors.savings;
+    case 'income': return colors.income;
     default: return colors.textDim;
   }
 }

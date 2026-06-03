@@ -35,15 +35,16 @@ export async function suggestedIncomeForMonth(
   const start = new Date(Date.UTC(year, month - 1 - months, 1)).toISOString().slice(0, 10);
 
   const { rows } = await pool.query<{ income: string | number }>(
-    `SELECT SUM(amount_pence) AS income
-     FROM transactions
-     WHERE user_id = $1
-       AND amount_pence > 0
-       AND category_id IS NULL
-       AND transaction_date >= $2
-       AND transaction_date <  $3
-     GROUP BY EXTRACT(YEAR FROM transaction_date),
-              EXTRACT(MONTH FROM transaction_date)`,
+    `SELECT SUM(t.amount_pence) AS income
+     FROM transactions t
+     LEFT JOIN categories c ON c.id = t.category_id
+     WHERE t.user_id = $1
+       AND t.amount_pence > 0
+       AND (t.category_id IS NULL OR c.meta_bucket = 'income')
+       AND t.transaction_date >= $2
+       AND t.transaction_date <  $3
+     GROUP BY EXTRACT(YEAR FROM t.transaction_date),
+              EXTRACT(MONTH FROM t.transaction_date)`,
     [userId, start, end],
   );
 

@@ -19,6 +19,7 @@ export const colors = {
   needs: '#60a5fa',
   wants: '#f472b6',
   savings: '#4ade80',
+  income: '#fbbf24',
 
   // Status
   green: '#4ade80',

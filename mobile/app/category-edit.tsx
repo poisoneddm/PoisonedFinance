@@ -15,16 +15,22 @@ import { formatPence } from '@/lib/format';
 import { colors, spacing, radius } from '@/constants/theme';
 import { Category, MetaBucket } from '@/lib/types';
 
-const BUCKET_ORDER: MetaBucket[] = ['needs', 'wants', 'savings'];
-const BUCKET_LABEL: Record<MetaBucket, string> = {
+// Picker buckets include 'income' (a category bucket) alongside the three spend
+// buckets so salaries can be tagged Income; MetaBucket itself stays the spend-only
+// union used by the budget-split screens.
+type PickerBucket = MetaBucket | 'income';
+const BUCKET_ORDER: PickerBucket[] = ['needs', 'wants', 'savings', 'income'];
+const BUCKET_LABEL: Record<PickerBucket, string> = {
   needs: 'Needs',
   wants: 'Wants',
   savings: 'Savings',
+  income: 'Income',
 };
-const BUCKET_HEADER_COLOR: Record<MetaBucket, string> = {
+const BUCKET_HEADER_COLOR: Record<PickerBucket, string> = {
   needs: colors.needs,
   wants: colors.wants,
   savings: colors.savings,
+  income: colors.income,
 };
 
 export default function CategoryEditScreen() {
@@ -51,9 +57,10 @@ export default function CategoryEditScreen() {
   }, []);
 
   const grouped = useMemo(() => {
-    const map: Record<MetaBucket, Category[]> = { needs: [], wants: [], savings: [] };
+    const map: Record<PickerBucket, Category[]> = { needs: [], wants: [], savings: [], income: [] };
     for (const c of categories ?? []) {
-      if (map[c.meta_bucket]) map[c.meta_bucket].push(c);
+      const bucket = c.meta_bucket as PickerBucket;
+      if (map[bucket]) map[bucket].push(c);
     }
     return map;
   }, [categories]);

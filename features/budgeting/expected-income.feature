@@ -35,3 +35,9 @@ Feature: Expected income drives budget targets
     And I set expected income for May 2026 to 999900 pence
     When I clear the expected income override for May 2026
     Then the expected income is 300000 with source "suggested"
+
+  Scenario: A credit tagged with the Income category still counts as income
+    Given a credit of 280000 pence in May 2026 tagged "Income"
+    When I request income for May 2026
+    Then the actual income is 280000
+    And the expected income is 280000 with source "actual"

@@ -44,6 +44,7 @@ const REVIEW_ITEMS = [
 const CATEGORIES = [
   { id: 'c1', name: 'Groceries', meta_bucket: 'needs', color_hex: '#60a5fa' },
   { id: 'c2', name: 'Shopping', meta_bucket: 'wants', color_hex: '#c084fc' },
+  { id: 'c3', name: 'Income', meta_bucket: 'income', color_hex: '#fbbf24' },
 ];
 
 beforeEach(() => {
@@ -112,6 +113,24 @@ describe('Category Edit screen', () => {
       }),
     );
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('offers the Income category so a mis-tagged salary can be re-tagged as income', async () => {
+    mockParams = { txnId: 'txn-1', merchant: 'ACME PAYROLL', amountPence: '280000' };
+    mockApiGet.mockResolvedValueOnce(CATEGORIES);
+    render(<CategoryEditScreen />);
+
+    await waitFor(() => expect(screen.getByLabelText('Select Income')).toBeTruthy());
+    fireEvent.press(screen.getByLabelText('Select Income'));
+    fireEvent.press(screen.getByLabelText('Save category'));
+
+    await waitFor(() =>
+      expect(mockApiPost).toHaveBeenCalledWith('/review/txn-1/change', {
+        category_name: 'Income',
+        create_rule: true,
+        user_id: '00000000-0000-0000-0000-000000000001',
+      }),
+    );
   });
 
   it('shows the transaction context (merchant) in the header', async () => {
