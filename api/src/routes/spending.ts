@@ -55,6 +55,7 @@ router.get('/spending/:userId', async (req: Request, res: Response) => {
         AND t.user_id = $1
         AND EXTRACT(YEAR  FROM t.transaction_date) = $2
         AND EXTRACT(MONTH FROM t.transaction_date) = $3
+       WHERE c.meta_bucket <> 'income'
        GROUP BY c.id, c.name, c.meta_bucket, c.color_hex
        ORDER BY total_pence DESC`,
       [userId, year, month],

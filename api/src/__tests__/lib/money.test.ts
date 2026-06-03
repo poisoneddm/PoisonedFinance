@@ -50,11 +50,12 @@ describe('incomeForMonth', () => {
     expect(params).toContain(6);
   });
 
-  it('counts only uncategorised credits as income (categorised credits are refunds)', async () => {
+  it('counts uncategorised credits and Income-tagged credits (spend-tagged credits are refunds)', async () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ income_pence: 0 }] });
     await incomeForMonth(SEED_USER_ID, 2026, 6);
     const sql: string = mockQuery.mock.calls[0][0];
     expect(sql).toContain('category_id IS NULL');
+    expect(sql).toContain("meta_bucket = 'income'");
   });
 });
 

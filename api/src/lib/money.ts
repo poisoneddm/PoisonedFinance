@@ -2,11 +2,12 @@ import { pool } from '@/db/client';
 import { MetaBucket } from '@/types/index';
 
 /**
- * Income for a given month: sum of positive (credit) transactions that are NOT
- * categorised into a spend bucket. A credit that has been categorised (e.g. a
- * Tesco refund tagged Groceries) is treated as a refund/reversal for that bucket
- * — it nets against bucket spend (see bucketSpendForMonth) and is excluded here
- * so it is never double-counted as income. §4.
+ * Income for a given month: sum of positive (credit) transactions that are either
+ * uncategorised OR tagged with the Income meta-bucket. A credit categorised into a
+ * SPEND bucket (e.g. a Tesco refund tagged Groceries) is treated as a refund/reversal
+ * — it nets against bucket spend (see bucketSpendForMonth) and is excluded here so it
+ * is never double-counted as income. Tagging a salary "Income" pins it as income even
+ * if it would otherwise be mis-categorised into a spend bucket. §4.
  */
 export async function incomeForMonth(
   userId: string,
@@ -16,9 +17,10 @@ export async function incomeForMonth(
   const sql = `
     SELECT COALESCE(SUM(t.amount_pence), 0)::bigint AS income_pence
     FROM transactions t
+    LEFT JOIN categories c ON c.id = t.category_id
     WHERE t.user_id = $1
       AND t.amount_pence > 0
-      AND t.category_id IS NULL
+      AND (t.category_id IS NULL OR c.meta_bucket = 'income')
       AND EXTRACT(YEAR  FROM t.transaction_date) = $2
       AND EXTRACT(MONTH FROM t.transaction_date) = $3
   `;
