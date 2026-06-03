@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { pool } from '@/db/client';
 import type { TxnForCategorisation, CategorizationResult } from './types';
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'llama-3.3-70b-versatile';
 const CHUNK_SIZE = 40;
 
 async function getCategoryNames(): Promise<string[]> {
@@ -11,37 +11,12 @@ async function getCategoryNames(): Promise<string[]> {
 }
 
 async function categoriseChunk(
-  client: Anthropic,
+  client: OpenAI,
   chunk: TxnForCategorisation[],
   categoryNames: string[],
 ): Promise<CategorizationResult[]> {
-  const message = await client.messages.create({
+  const response = await client.chat.completions.create({
     model: MODEL,
-    max_tokens: 1024,
-    tools: [
-      {
-        name: 'categorise_transactions',
-        description: 'Categorise UK bank transactions into the provided categories.',
-        input_schema: {
-          type: 'object' as const,
-          properties: {
-            results: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  category: { type: 'string', enum: categoryNames },
-                },
-                required: ['id', 'category'],
-              },
-            },
-          },
-          required: ['results'],
-        },
-      },
-    ],
-    tool_choice: { type: 'tool', name: 'categorise_transactions' },
     messages: [
       {
         role: 'user',
@@ -52,12 +27,39 @@ async function categoriseChunk(
         )}`,
       },
     ],
+    tools: [
+      {
+        type: 'function',
+        function: {
+          name: 'categorise_transactions',
+          description: 'Categorise UK bank transactions into the provided categories.',
+          parameters: {
+            type: 'object',
+            properties: {
+              results: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    category: { type: 'string', enum: categoryNames },
+                  },
+                  required: ['id', 'category'],
+                },
+              },
+            },
+            required: ['results'],
+          },
+        },
+      },
+    ],
+    tool_choice: { type: 'function', function: { name: 'categorise_transactions' } },
   });
 
-  const toolUse = message.content.find(b => b.type === 'tool_use');
-  if (!toolUse || toolUse.type !== 'tool_use') throw new Error('Claude did not return tool_use');
+  const toolCall = response.choices[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error('AI did not return a tool call');
 
-  const { results } = toolUse.input as { results: Array<{ id: string; category: string }> };
+  const { results } = JSON.parse(toolCall.function.arguments) as { results: Array<{ id: string; category: string }> };
   return results.map(r => ({ id: r.id, category_name: r.category, source: 'ai' as const }));
 }
 
@@ -66,7 +68,10 @@ export async function batchCategorise(
 ): Promise<CategorizationResult[]> {
   if (transactions.length === 0) return [];
 
-  const client = new Anthropic();
+  const client = new OpenAI({
+    apiKey: process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
+  });
   const categoryNames = await getCategoryNames();
   const allResults: CategorizationResult[] = [];
 

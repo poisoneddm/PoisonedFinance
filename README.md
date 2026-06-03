@@ -1,6 +1,6 @@
 # PoisonedFinance
 
-Personal finance app aggregating UK bank accounts via Open Banking (TrueLayer), auto-categorising transactions with Claude AI, and tracking spending against a 40/20/40 Needs/Wants/Savings budget.
+Personal finance app aggregating UK bank accounts via Open Banking (TrueLayer), auto-categorising transactions with AI (Groq / Llama 3.3), and tracking spending against a 40/20/40 Needs/Wants/Savings budget.
 
 ---
 
@@ -20,7 +20,7 @@ cd api && npm install
 
 # 2. Copy and fill in environment variables
 cp api/.env.example api/.env
-# Edit api/.env — set DATABASE_URL, ENCRYPTION_KEY, ANTHROPIC_API_KEY, TRUELAYER_*
+# Edit api/.env — set DATABASE_URL, ENCRYPTION_KEY, GROQ_API_KEY, TRUELAYER_*
 
 # 3. Start in dev mode (ts-node-dev, auto-restart on change)
 #    Runs migrations on boot then starts Express on PORT (default 3000)
@@ -78,7 +78,7 @@ docker build -t pf-api ./api
 docker run \
   -e DATABASE_URL="postgresql://postgres:postgres@host.docker.internal:5432/poisonedfinance" \
   -e ENCRYPTION_KEY="<your-key>" \
-  -e ANTHROPIC_API_KEY="sk-ant-..." \
+  -e GROQ_API_KEY="gsk_..." \
   -e TRUELAYER_CLIENT_ID="..." \
   -e TRUELAYER_CLIENT_SECRET="..." \
   -e TRUELAYER_REDIRECT_URI="http://localhost:3000/auth/callback" \
@@ -109,7 +109,7 @@ fly postgres attach poisonedfinance-pg --app poisonedfinance-api
 # Set all runtime secrets (see docs/superpowers/plans/2026-06-01-deploy-ci.md Task 5)
 fly secrets set \
   ENCRYPTION_KEY="<32-byte base64>" \
-  ANTHROPIC_API_KEY="sk-ant-..." \
+  GROQ_API_KEY="gsk_..." \
   TRUELAYER_CLIENT_ID="..." \
   TRUELAYER_CLIENT_SECRET="..." \
   --app poisonedfinance-api
@@ -119,7 +119,8 @@ fly secrets set \
 ### Deploy manually
 
 ```bash
-# Builds on Fly.io remote builders; runs release_command (migrations) before cutover
+# Run from api/ — fly.toml and Dockerfile must share the same build context
+cd api
 flyctl deploy --remote-only --app poisonedfinance-api
 ```
 
