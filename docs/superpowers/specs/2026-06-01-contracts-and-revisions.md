@@ -71,14 +71,18 @@ Before using a connection's access token, check expiry and refresh if within 60s
 
 ## 4. Income detection
 
-Income for `(year, month)` = sum of **credit** transactions in that month, excluding money moved *out of* savings.
+Income for `(year, month)` = sum of **uncategorised credit** transactions in that
+month. A credit that has been categorised into a spend bucket (e.g. a refund
+tagged `Groceries`) is treated as a refund/reversal for that bucket — it nets
+against bucket spend (§5) and is **not** counted as income, so it is never
+double-counted.
 
 ```
 income_pence(year, month) =
   SUM(amount_pence)
   WHERE amount_pence > 0
     AND transaction_date within month
-    AND (category_id IS NULL OR category.meta_bucket <> 'savings')
+    AND category_id IS NULL
 ```
 
 All date filtering uses `transaction_date` (never `posted_date`).
@@ -87,17 +91,19 @@ All date filtering uses `transaction_date` (never `posted_date`).
 
 ## 5. Spend aggregation (per bucket, per month)
 
-Outflows are stored negative. Bucket spend is the absolute value of debits whose category's `meta_bucket` matches:
+Outflows are stored negative. Bucket spend is the **net** of all transactions in
+the bucket: debits add to spend, credits (refunds/reversals categorised into the
+bucket) subtract from it.
 
 ```
 bucket_spend_pence(bucket, year, month) =
   SUM(-amount_pence)
-  WHERE amount_pence < 0
-    AND transaction_date within month
+  WHERE transaction_date within month
     AND category.meta_bucket = bucket
 ```
 
-`savings` bucket spend = money moved *into* savings (debits categorised `Savings`).
+So a £50 Groceries refund reduces Needs spend by £50. `savings` bucket spend =
+net money moved *into* savings (debits in minus credits out).
 
 ---
 

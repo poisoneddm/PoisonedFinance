@@ -51,7 +51,6 @@ router.get('/spending/:userId', async (req: Request, res: Response) => {
        LEFT JOIN transactions t
          ON t.category_id = c.id
         AND t.user_id = $1
-        AND t.amount_pence < 0
         AND EXTRACT(YEAR  FROM t.transaction_date) = $2
         AND EXTRACT(MONTH FROM t.transaction_date) = $3
        GROUP BY c.id, c.name, c.meta_bucket, c.color_hex

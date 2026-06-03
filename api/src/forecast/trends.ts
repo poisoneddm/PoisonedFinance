@@ -24,23 +24,21 @@ export async function monthlyAverages(
 ): Promise<MonthlyAverages> {
   // We group by (year, month) of transaction_date, compute per-month totals,
   // then take AVG across the groups that fall within the trailing N calendar months.
-  // Income = SUM of credits excluding savings meta_bucket (contracts §4).
-  // Bucket spend = SUM(-amount_pence) for debits in that meta_bucket (contracts §5).
+  // Income = uncategorised credits (a categorised credit is a refund, not income).
+  // Bucket spend = net SUM(-amount_pence) per meta_bucket (refund credits subtract).
   const sql = `
     WITH month_totals AS (
       SELECT
         DATE_TRUNC('month', t.transaction_date) AS month_start,
         COALESCE(SUM(t.amount_pence) FILTER (
           WHERE t.amount_pence > 0
-            AND (t.category_id IS NULL OR c.meta_bucket <> 'savings')
+            AND t.category_id IS NULL
         ), 0) AS income_pence,
         COALESCE(SUM(-t.amount_pence) FILTER (
-          WHERE t.amount_pence < 0
-            AND c.meta_bucket = 'needs'
+          WHERE c.meta_bucket = 'needs'
         ), 0) AS needs_pence,
         COALESCE(SUM(-t.amount_pence) FILTER (
-          WHERE t.amount_pence < 0
-            AND c.meta_bucket = 'wants'
+          WHERE c.meta_bucket = 'wants'
         ), 0) AS wants_pence
       FROM transactions t
       LEFT JOIN categories c ON c.id = t.category_id
