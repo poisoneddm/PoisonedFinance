@@ -8,14 +8,17 @@ jest.mock('@/lib/money', () => ({
   incomeForMonth: jest.fn(),
   bucketSpendForMonth: jest.fn(),
 }));
+jest.mock('@/lib/income', () => ({ expectedIncomeForMonth: jest.fn() }));
 jest.mock('@/db/client', () => ({ pool: { query: jest.fn() } }));
 
 import { getOrCreateGoal } from '@/lib/goals';
 import { incomeForMonth, bucketSpendForMonth } from '@/lib/money';
+import { expectedIncomeForMonth } from '@/lib/income';
 import { pool } from '@/db/client';
 
 const mockGetOrCreateGoal = getOrCreateGoal as jest.MockedFunction<typeof getOrCreateGoal>;
 const mockIncomeForMonth = incomeForMonth as jest.MockedFunction<typeof incomeForMonth>;
+const mockExpectedIncome = expectedIncomeForMonth as jest.MockedFunction<typeof expectedIncomeForMonth>;
 const mockBucketSpend = bucketSpendForMonth as jest.MockedFunction<typeof bucketSpendForMonth>;
 // pg's query is heavily overloaded; cast to a plain jest.Mock so
 // mockResolvedValueOnce accepts arbitrary row shapes (avoids 'never' param).
@@ -38,6 +41,11 @@ beforeEach(() => {
   jest.resetAllMocks();
   mockGetOrCreateGoal.mockResolvedValue(goal);
   mockIncomeForMonth.mockResolvedValue(250000);
+  // Budget targets derive from expected income; actual=expected here so the
+  // existing income_pence / goal_pence assertions are unchanged.
+  mockExpectedIncome.mockResolvedValue({
+    expected_pence: 250000, source: 'actual', suggested_pence: 0, actual_pence: 250000,
+  });
   // needs=80000 (32%), wants=40000 (16%), savings=100000 (40%)
   mockBucketSpend
     .mockResolvedValueOnce(80000)   // needs

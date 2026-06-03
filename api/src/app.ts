@@ -11,6 +11,7 @@ import transactionsRouter from '@/routes/transactions';
 import goalsRouter from '@/routes/goals';
 import forecastRouter from '@/routes/forecast';
 import categoriesRouter from '@/routes/categories';
+import incomeRouter from '@/routes/income';
 import importPdfRouter from '@/routes/importPdf';
 import { errorHandler } from '@/lib/errorHandler';
 
@@ -29,6 +30,7 @@ export function createApp() {
   app.use(goalsRouter);
   app.use(forecastRouter);
   app.use(categoriesRouter);
+  app.use(incomeRouter);
   app.use(importPdfRouter);
   app.use(errorHandler);
   return app;
