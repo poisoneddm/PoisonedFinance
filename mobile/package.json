@@ -47,6 +47,7 @@
   },
   "overrides": {
     "uuid": "^11.1.1",
+    "react-native-renderer": "19.2.7",
     "react-test-renderer": "19.2.7"
   },
   "jest": {
