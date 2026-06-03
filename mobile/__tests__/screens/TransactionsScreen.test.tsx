@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { TransactionsScreen } from '../../screens/TransactionsScreen';
 
 jest.mock('../../lib/api', () => ({
@@ -77,5 +77,23 @@ describe('TransactionsScreen', () => {
     await waitFor(() => {
       expect(getByText('Groceries')).toBeTruthy();
     });
+  });
+
+  it('invokes onTransactionPress with the tapped transaction', async () => {
+    mockApiGet.mockResolvedValueOnce(txnData);
+    const onTransactionPress = jest.fn();
+    const { getByLabelText } = render(
+      <TransactionsScreen
+        userId={SEED_USER_ID}
+        year={2026}
+        month={6}
+        onTransactionPress={onTransactionPress}
+      />,
+    );
+    await waitFor(() => expect(getByLabelText('Edit category for Tesco')).toBeTruthy());
+    fireEvent.press(getByLabelText('Edit category for Tesco'));
+    expect(onTransactionPress).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'tx1', category_name: 'Groceries' }),
+    );
   });
 });

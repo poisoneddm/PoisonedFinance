@@ -13,7 +13,7 @@ Feature: Review Queue and Rule Creation
 
   Scenario: Confirming an AI suggestion sets source=confirmed and needs_review=false
     Given a transaction "txn-confirm-01" with categorisation_source "ai" and needs_review true
-      and category_name "Shopping"
+    And its suggested category_name is "Shopping"
     When I POST to "/review/txn-confirm-01/confirm"
     Then the transaction "txn-confirm-01" has categorisation_source "confirmed"
     And the transaction "txn-confirm-01" has needs_review false
@@ -28,7 +28,7 @@ Feature: Review Queue and Rule Creation
 
   Scenario: Changing a category sets source=manual and needs_review=false
     Given a transaction "txn-change-01" with categorisation_source "ai" and needs_review true
-      and category_name "Shopping"
+    And its suggested category_name is "Shopping"
     When I POST to "/review/txn-change-01/change" with body
       """
       { "category_name": "Groceries" }

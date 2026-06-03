@@ -15,7 +15,7 @@ router.get(
     const { rows } = await pool.query(
       `SELECT t.id, t.merchant_name, t.description, t.amount_pence,
               t.transaction_date, t.categorisation_source,
-              c.name AS category_name, c.meta_bucket,
+              COALESCE(c.name, 'Uncategorised') AS category_name, c.meta_bucket,
               la.account_name
        FROM transactions t
        LEFT JOIN categories c ON c.id = t.category_id
