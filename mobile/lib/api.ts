@@ -5,6 +5,9 @@
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+/** Public API base URL — needed to build the TrueLayer OAuth link opened in the browser. */
+export const API_BASE_URL = BASE_URL;
+
 async function request<T>(
   method: 'GET' | 'POST' | 'PUT',
   path: string,

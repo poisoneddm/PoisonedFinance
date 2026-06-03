@@ -10,6 +10,7 @@ import { useMonthData } from '@/hooks/useMonthData';
 import { formatPence } from '@/lib/format';
 import { statusColors } from '@/lib/statusColors';
 import { PillLevel } from '@/lib/types';
+import { colors } from '@/constants/theme';
 
 interface Pill {
   bucket: string;
@@ -59,7 +60,7 @@ export function DashboardScreen({ userId, year, month }: DashboardScreenProps) {
   if (state.status === 'error') {
     return (
       <View style={styles.center}>
-        <Text>Error: {state.error}</Text>
+        <Text style={styles.errorText}>Error: {state.error}</Text>
       </View>
     );
   }
@@ -106,18 +107,19 @@ export function DashboardScreen({ userId, year, month }: DashboardScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  incomeLabel: { fontSize: 14, color: '#888', marginBottom: 4 },
-  incomeAmount: { fontSize: 28, fontWeight: 'bold', marginBottom: 16 },
-  reviewAlert: { color: '#f59e0b', marginBottom: 12 },
+  container: { flex: 1, padding: 16, backgroundColor: colors.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  errorText: { color: colors.red },
+  incomeLabel: { fontSize: 14, color: colors.textMuted, marginBottom: 4 },
+  incomeAmount: { fontSize: 28, fontWeight: 'bold', marginBottom: 16, color: colors.text },
+  reviewAlert: { color: colors.amber, marginBottom: 12 },
   pillsRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
   pill: { flex: 1, borderRadius: 8, padding: 12 },
   pillLabel: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
   pillAmount: { fontSize: 16, fontWeight: 'bold', marginTop: 4 },
   pillGoal: { fontSize: 11, marginTop: 2 },
-  sectionHeader: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
-  txRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#333' },
-  txMerchant: { flex: 1, fontSize: 14 },
-  txAmount: { fontSize: 14, fontWeight: '500' },
+  sectionHeader: { fontSize: 16, fontWeight: '600', marginBottom: 8, color: colors.text },
+  txRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  txMerchant: { flex: 1, fontSize: 14, color: colors.text },
+  txAmount: { fontSize: 14, fontWeight: '500', color: colors.text },
 });

@@ -9,6 +9,7 @@ import {
 import { apiGet } from '@/lib/api';
 import { formatPence } from '@/lib/format';
 import { SEED_USER_ID } from '@/lib/currentUser';
+import { colors } from '@/constants/theme';
 
 // ---------- Types (mirrors API response, contracts §9) ----------
 
@@ -152,7 +153,7 @@ export default function ForecastScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0f0f',
+    backgroundColor: colors.bg,
   },
   content: {
     padding: 16,
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0f0f0f',
+    backgroundColor: colors.bg,
   },
   errorText: {
     color: '#f87171',

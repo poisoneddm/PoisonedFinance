@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useMonthData } from '@/hooks/useMonthData';
 import { formatPence } from '@/lib/format';
+import { colors } from '@/constants/theme';
 
 interface Transaction {
   id: string;
@@ -65,7 +66,7 @@ export function TransactionsScreen({
   if (state.status === 'error') {
     return (
       <View style={styles.center}>
-        <Text>Error: {state.error}</Text>
+        <Text style={styles.errorText}>Error: {state.error}</Text>
       </View>
     );
   }
@@ -73,8 +74,14 @@ export function TransactionsScreen({
   return (
     <FlatList
       style={styles.list}
+      contentContainerStyle={state.data.length === 0 ? styles.emptyContent : undefined}
       data={state.data}
       keyExtractor={item => item.id}
+      ListEmptyComponent={
+        <Text style={styles.emptyText}>
+          No transactions yet. Link a bank or upload a statement from Settings.
+        </Text>
+      }
       renderItem={({ item }) => (
         <View style={styles.row}>
           <View style={styles.rowLeft}>
@@ -109,21 +116,24 @@ export function TransactionsScreen({
 }
 
 const styles = StyleSheet.create({
-  list: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  list: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  errorText: { color: colors.red },
+  emptyContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyText: { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 20 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     padding: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.border,
   },
   rowLeft: { flex: 1, marginRight: 8 },
-  merchant: { fontSize: 14, fontWeight: '500' },
+  merchant: { fontSize: 14, fontWeight: '500', color: colors.text },
   catBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
   catDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
-  catText: { fontSize: 12, color: '#888' },
-  date: { fontSize: 12, color: '#666', marginTop: 2 },
+  catText: { fontSize: 12, color: colors.textMuted },
+  date: { fontSize: 12, color: colors.textDim, marginTop: 2 },
   amount: { fontSize: 14, fontWeight: '600' },
 });
