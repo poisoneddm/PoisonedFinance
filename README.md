@@ -119,7 +119,8 @@ fly secrets set \
 ### Deploy manually
 
 ```bash
-# Builds on Fly.io remote builders; runs release_command (migrations) before cutover
+# Run from api/ — fly.toml and Dockerfile must share the same build context
+cd api
 flyctl deploy --remote-only --app poisonedfinance-api
 ```
 
