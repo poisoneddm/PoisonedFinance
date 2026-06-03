@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
 import { apiPost, apiUpload, API_BASE_URL } from '@/lib/api';
 import { SEED_USER_ID } from '@/lib/currentUser';
 import { colors, spacing, radius } from '@/constants/theme';
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [linking, setLinking] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -145,6 +147,21 @@ export default function SettingsScreen() {
           ) : (
             <Text style={styles.buttonSecondaryText}>Sync now</Text>
           )}
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Budget</Text>
+        <Text style={styles.sectionHint}>
+          Set how your income splits across Needs, Wants, and Savings.
+        </Text>
+        <TouchableOpacity
+          style={[styles.buttonSecondary, busy && styles.buttonDisabled]}
+          onPress={() => router.push('/goals')}
+          disabled={busy}
+          accessibilityLabel="Edit budget split"
+        >
+          <Text style={styles.buttonSecondaryText}>Edit budget split</Text>
         </TouchableOpacity>
       </View>
 
