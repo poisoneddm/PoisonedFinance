@@ -10,6 +10,7 @@ import { useMonthData } from '@/hooks/useMonthData';
 import { formatPence } from '@/lib/format';
 import { statusColors } from '@/lib/statusColors';
 import { PillLevel } from '@/lib/types';
+import { colors } from '@/constants/theme';
 
 interface GoalBar {
   bucket: string;
@@ -55,7 +56,7 @@ export function SpendingScreen({ userId, year, month }: SpendingScreenProps) {
   if (state.status === 'error') {
     return (
       <View style={styles.center}>
-        <Text>Error: {state.error}</Text>
+        <Text style={styles.errorText}>Error: {state.error}</Text>
       </View>
     );
   }
@@ -109,18 +110,19 @@ export function SpendingScreen({ userId, year, month }: SpendingScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  sectionHeader: { fontSize: 16, fontWeight: '600', marginBottom: 12, marginTop: 8 },
+  container: { flex: 1, padding: 16, backgroundColor: colors.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  errorText: { color: colors.red },
+  sectionHeader: { fontSize: 16, fontWeight: '600', marginBottom: 12, marginTop: 8, color: colors.text },
   barWrapper: { marginBottom: 20 },
   barLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  barLabel: { fontSize: 14, fontWeight: '600' },
-  barPct: { fontSize: 14, color: '#888' },
-  barTrack: { height: 8, backgroundColor: '#222', borderRadius: 4, overflow: 'hidden' },
+  barLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
+  barPct: { fontSize: 14, color: colors.textMuted },
+  barTrack: { height: 8, backgroundColor: colors.card, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: 8, borderRadius: 4 },
-  barAmounts: { fontSize: 12, color: '#888', marginTop: 4 },
-  catRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#333' },
+  barAmounts: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+  catRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   catDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  catName: { flex: 1, fontSize: 14 },
-  catTotal: { fontSize: 14, fontWeight: '500' },
+  catName: { flex: 1, fontSize: 14, color: colors.text },
+  catTotal: { fontSize: 14, fontWeight: '500', color: colors.text },
 });

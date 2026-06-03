@@ -44,11 +44,12 @@ describe('GET /auth/callback', () => {
     expect(res.status).toBe(400);
   });
 
-  it('exchanges code and inserts bank_connection record (valid state)', async () => {
+  it('exchanges code, inserts bank_connection record, and redirects back to the app (valid state)', async () => {
     const { pool } = require('@/db/client');
     const state = issueState('user-1');
     const res = await request(app).get(`/auth/callback?code=auth-code&state=${encodeURIComponent(state)}`);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('poisonedfinance://link-complete?status=ok');
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO bank_connections'),
       expect.arrayContaining(['enc:acc', 'enc:ref']),

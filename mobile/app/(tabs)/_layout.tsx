@@ -13,6 +13,9 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Dark scene background for every tab, so screens never fall back to the
+        // platform-default white behind transparent content.
+        sceneStyle: { backgroundColor: colors.bg },
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         tabBarActiveTintColor: colors.purple,
         tabBarInactiveTintColor: colors.textMuted,

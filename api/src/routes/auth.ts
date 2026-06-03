@@ -8,6 +8,11 @@ import { issueState, consumeState } from '@/lib/oauthState';
 
 const router = Router();
 
+// Deep link the OAuth callback redirects back to once linking finishes, so the
+// user lands back inside the mobile app rather than on a raw JSON page. The app
+// listens for this URL and kicks off a full sync. Overridable for other clients.
+const APP_RETURN_URL = process.env.APP_RETURN_URL ?? 'poisonedfinance://link-complete';
+
 // GET /auth/truelayer?userId=<uuid>
 // Redirects user to TrueLayer consent screen. A single-use, server-stored nonce
 // is bound to userId and round-tripped as `state` for CSRF protection.
@@ -42,10 +47,12 @@ router.get('/auth/callback', async (req, res) => {
     const connectionId = connRows[0].id as string;
     const accessToken = await getValidAccessToken(connectionId);
     await syncAccounts(userId, connectionId, accessToken);
-    res.json({ ok: true });
+    // Return the user to the app. Transactions are pulled by the full sync the
+    // app triggers on return (POST /sync/:userId), keeping this redirect fast.
+    res.redirect(`${APP_RETURN_URL}?status=ok`);
   } catch (err) {
     console.error('[auth/callback]', err);
-    res.status(500).json({ error: 'authentication callback failed' });
+    res.redirect(`${APP_RETURN_URL}?status=error`);
   }
 });
 
