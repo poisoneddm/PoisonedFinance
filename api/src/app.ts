@@ -2,8 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import healthRouter from '@/routes/health';
-import authRouter from '@/routes/auth';
-import syncRouter from '@/routes/sync';
 import reviewRouter from '@/routes/review';
 import dashboardRouter from '@/routes/dashboard';
 import spendingRouter from '@/routes/spending';
@@ -21,8 +19,6 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
   app.use(healthRouter);
-  app.use(authRouter);
-  app.use(syncRouter);
   app.use(reviewRouter);
   app.use(dashboardRouter);
   app.use(spendingRouter);
