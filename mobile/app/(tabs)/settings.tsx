@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,67 +9,14 @@ import {
   ScrollView,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
-import { apiPost, apiUpload, API_BASE_URL } from '@/lib/api';
+import { apiUpload } from '@/lib/api';
 import { SEED_USER_ID } from '@/lib/currentUser';
 import { colors, spacing, radius } from '@/constants/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
-  const [linking, setLinking] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-
-  // Pull the latest accounts + transactions for the current user.
-  const runSync = useCallback(async (announce: boolean) => {
-    setSyncing(true);
-    try {
-      const res = await apiPost<{ ok: boolean; synced: number }>(
-        `/sync/${SEED_USER_ID}`,
-        {},
-      );
-      if (announce) {
-        Alert.alert(
-          'Sync complete',
-          `Refreshed ${res.synced} bank connection${res.synced === 1 ? '' : 's'}.`,
-        );
-      }
-    } catch (err) {
-      Alert.alert('Sync failed', err instanceof Error ? err.message : String(err));
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
-
-  // The API's OAuth callback redirects back into the app via the
-  // `poisonedfinance://link-complete?status=...` deep link. When we receive it
-  // we finish the flow by pulling transactions for the freshly linked account.
-  const returnUrl = Linking.useURL();
-  useEffect(() => {
-    if (!returnUrl) return;
-    const { queryParams } = Linking.parse(returnUrl);
-    if (queryParams?.status === 'ok') {
-      setLinking(false);
-      runSync(true);
-    } else if (queryParams?.status === 'error') {
-      setLinking(false);
-      Alert.alert('Could not link bank', 'Something went wrong connecting your bank. Please try again.');
-    }
-  }, [returnUrl, runSync]);
-
-  async function handleLinkBank() {
-    setLinking(true);
-    const url = `${API_BASE_URL}/auth/truelayer?userId=${encodeURIComponent(SEED_USER_ID)}`;
-    try {
-      const supported = await Linking.canOpenURL(url);
-      if (!supported) throw new Error('Cannot open the bank linking page.');
-      await Linking.openURL(url);
-    } catch (err) {
-      setLinking(false);
-      Alert.alert('Could not start linking', err instanceof Error ? err.message : String(err));
-    }
-  }
 
   async function handlePdfUpload() {
     let result;
@@ -112,43 +59,11 @@ export default function SettingsScreen() {
     }
   }
 
-  const busy = uploading || linking || syncing;
+  const busy = uploading;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Settings</Text>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Connected Accounts</Text>
-        <Text style={styles.sectionHint}>
-          Securely connect your bank to import transactions automatically.
-        </Text>
-        <TouchableOpacity
-          style={[styles.button, (busy) && styles.buttonDisabled]}
-          onPress={handleLinkBank}
-          disabled={busy}
-          accessibilityLabel="Link a bank account"
-        >
-          {linking ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Link a bank account</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.buttonSecondary, busy && styles.buttonDisabled]}
-          onPress={() => runSync(true)}
-          disabled={busy}
-          accessibilityLabel="Sync now"
-        >
-          {syncing ? (
-            <ActivityIndicator color={colors.purpleLight} />
-          ) : (
-            <Text style={styles.buttonSecondaryText}>Sync now</Text>
-          )}
-        </TouchableOpacity>
-      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Budget</Text>
@@ -176,7 +91,7 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Import</Text>
         <Text style={styles.sectionHint}>
-          No bank link? Upload a PDF statement instead.
+          Upload a PDF bank statement to import and categorise your transactions.
         </Text>
         <TouchableOpacity
           style={[styles.buttonSecondary, busy && styles.buttonDisabled]}
@@ -226,19 +141,6 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     marginBottom: spacing.lg,
     lineHeight: 18,
-  },
-  button: {
-    backgroundColor: colors.purple,
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.xl,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   buttonSecondary: {
     backgroundColor: colors.purpleDim,

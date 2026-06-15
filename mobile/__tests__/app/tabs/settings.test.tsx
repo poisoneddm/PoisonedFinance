@@ -1,46 +1,56 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
-jest.mock('expo-linking', () => ({
-  openURL: jest.fn().mockResolvedValue(undefined),
-  canOpenURL: jest.fn().mockResolvedValue(true),
-  useURL: jest.fn(() => null),
-  parse: jest.fn(() => ({ queryParams: {} })),
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
 }));
 
 jest.mock('expo-document-picker', () => ({
-  getDocumentAsync: jest.fn().mockResolvedValue({ canceled: true, assets: [] }),
+  getDocumentAsync: jest.fn(),
 }));
 
 jest.mock('@/lib/api', () => ({
-  API_BASE_URL: 'http://localhost:3000',
-  apiPost: jest.fn().mockResolvedValue({ ok: true, synced: 1 }),
-  apiUpload: jest.fn(),
+  apiUpload: jest.fn().mockResolvedValue({ ok: true, imported: 3 }),
 }));
 
 import SettingsScreen from '@/app/(tabs)/settings';
-import * as Linking from 'expo-linking';
-import { apiPost } from '@/lib/api';
+import * as DocumentPicker from 'expo-document-picker';
+import { apiUpload } from '@/lib/api';
 import { SEED_USER_ID } from '@/lib/currentUser';
 
-describe('SettingsScreen — bank linking & sync', () => {
-  beforeEach(() => jest.clearAllMocks());
+const mockGetDocument = DocumentPicker.getDocumentAsync as jest.Mock;
 
-  it('opens the TrueLayer OAuth URL when "Link a bank account" is pressed', async () => {
+describe('SettingsScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetDocument.mockResolvedValue({ canceled: true, assets: [] });
+  });
+
+  it('navigates to the expected-income and budget-split editors', () => {
     const { getByLabelText } = render(<SettingsScreen />);
-    fireEvent.press(getByLabelText('Link a bank account'));
+    fireEvent.press(getByLabelText('Edit expected income'));
+    expect(mockPush).toHaveBeenCalledWith('/income');
+    fireEvent.press(getByLabelText('Edit budget split'));
+    expect(mockPush).toHaveBeenCalledWith('/goals');
+  });
+
+  it('uploads a picked PDF statement to /import/pdf', async () => {
+    mockGetDocument.mockResolvedValueOnce({
+      canceled: false,
+      assets: [{ uri: 'file:///statement.pdf', name: 'statement.pdf' }],
+    });
+    const { getByLabelText } = render(<SettingsScreen />);
+    fireEvent.press(getByLabelText('Upload statement PDF'));
     await waitFor(() => {
-      expect(Linking.openURL).toHaveBeenCalledWith(
-        `http://localhost:3000/auth/truelayer?userId=${encodeURIComponent(SEED_USER_ID)}`,
-      );
+      expect(apiUpload).toHaveBeenCalledWith('/import/pdf', expect.any(FormData));
     });
   });
 
-  it('triggers a sync via POST /sync/:userId when "Sync now" is pressed', async () => {
+  it('does not upload when the document picker is cancelled', async () => {
     const { getByLabelText } = render(<SettingsScreen />);
-    fireEvent.press(getByLabelText('Sync now'));
-    await waitFor(() => {
-      expect(apiPost).toHaveBeenCalledWith(`/sync/${SEED_USER_ID}`, {});
-    });
+    fireEvent.press(getByLabelText('Upload statement PDF'));
+    await waitFor(() => expect(mockGetDocument).toHaveBeenCalled());
+    expect(apiUpload).not.toHaveBeenCalled();
   });
 });
