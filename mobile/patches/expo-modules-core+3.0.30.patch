@@ -26,3 +26,20 @@ index 9697cea..6b4d1a8 100644
    }
  }
  
+diff --git a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
+index 7c22069..44f619d 100644
+--- a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
++++ b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
+@@ -22,9 +22,9 @@ internal fun Project.applyDefaultPlugins() {
+   if (!plugins.hasPlugin("com.android.library")) {
+     plugins.apply("com.android.library")
+   }
+-  if (!plugins.hasPlugin("kotlin-android")) {
+-    plugins.apply("kotlin-android")
+-  }
++  // AGP 9.0+ provides built-in Kotlin support - applying kotlin-android alongside it is now
++  // a configuration error ("no longer required... remove the plugin"). Same fix already
++  // applied to this project's own android/app/build.gradle.
+   if (!plugins.hasPlugin("maven-publish")) {
+     plugins.apply("maven-publish")
+   }

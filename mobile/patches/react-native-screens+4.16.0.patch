@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-screens/android/build.gradle b/node_modules/react-native-screens/android/build.gradle
+index 114be81..d27a615 100644
+--- a/node_modules/react-native-screens/android/build.gradle
++++ b/node_modules/react-native-screens/android/build.gradle
+@@ -90,7 +90,7 @@ if (isNewArchitectureEnabled()) {
+     apply plugin: "com.facebook.react"
+ }
+ apply plugin: 'com.android.library'
+-apply plugin: 'kotlin-android'
++// AGP 9.0+ provides built-in Kotlin support - kotlin-android alongside it is now an error.
+ 
+ def reactNativeArchitectures() {
+     def value = project.getProperties().get("reactNativeArchitectures")
