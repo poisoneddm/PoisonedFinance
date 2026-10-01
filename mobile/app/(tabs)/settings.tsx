@@ -18,11 +18,12 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
 
-  async function handlePdfUpload() {
+  async function handleStatementUpload() {
     let result;
     try {
       result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
+        // Android has no registered mime type for .ofx, so allow any file; the API detects the format.
+        type: '*/*',
         copyToCacheDirectory: true,
       });
     } catch {
@@ -39,18 +40,20 @@ export default function SettingsScreen() {
       // React Native FormData accepts { uri, name, type } objects
       formData.append('file', {
         uri: asset.uri,
-        name: asset.name ?? 'statement.pdf',
-        type: 'application/pdf',
+        name: asset.name ?? 'statement',
+        type: asset.mimeType ?? 'application/octet-stream',
       } as unknown as Blob);
       formData.append('userId', SEED_USER_ID);
 
-      const response = await apiUpload<{ ok: boolean; imported: number }>(
-        '/import/pdf',
+      const response = await apiUpload<{ ok: boolean; imported: number; found: number }>(
+        '/import/statement',
         formData,
       );
+      const skipped = response.found - response.imported;
       Alert.alert(
         'Import complete',
-        `${response.imported} new transaction${response.imported === 1 ? '' : 's'} imported.`,
+        `${response.imported} new transaction${response.imported === 1 ? '' : 's'} imported.` +
+          (skipped > 0 ? ` ${skipped} already imported.` : ''),
       );
     } catch (err) {
       Alert.alert('Import failed', err instanceof Error ? err.message : String(err));
@@ -91,18 +94,18 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Import</Text>
         <Text style={styles.sectionHint}>
-          Upload a PDF bank statement to import and categorise your transactions.
+          Upload a bank statement (PDF, CSV or OFX) to import and categorise your transactions.
         </Text>
         <TouchableOpacity
           style={[styles.buttonSecondary, busy && styles.buttonDisabled]}
-          onPress={handlePdfUpload}
+          onPress={handleStatementUpload}
           disabled={busy}
-          accessibilityLabel="Upload statement PDF"
+          accessibilityLabel="Upload statement"
         >
           {uploading ? (
             <ActivityIndicator color={colors.purpleLight} />
           ) : (
-            <Text style={styles.buttonSecondaryText}>Upload statement (PDF)</Text>
+            <Text style={styles.buttonSecondaryText}>Upload statement</Text>
           )}
         </TouchableOpacity>
       </View>

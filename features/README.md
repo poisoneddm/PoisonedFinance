@@ -7,7 +7,7 @@ Feature files are written in Gherkin and bound to Jest step-definition files via
 | Directory | Capability |
 |-----------|-----------|
 | `features/categorisation/` | Rules engine, AI fallback, review queue |
-| `features/sync/` | PDF statement import |
+| `features/sync/` | Statement import (PDF, CSV, OFX) |
 | `features/budgeting/` | Spending buckets, dashboard pills, goal config |
 | `features/forecast/` | Savings forecast tiers, spending trend callouts |
 

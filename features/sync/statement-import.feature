@@ -1,5 +1,5 @@
 @wip
-Feature: PDF statement import fallback
+Feature: Bank statement import (PDF, CSV, OFX)
 
   Background:
     Given a seeded user
@@ -47,3 +47,23 @@ Feature: PDF statement import fallback
     Given a PDF with 1 transaction line
     When the upload completes
     Then the categorisation pipeline runs on the new transaction ID
+
+  Scenario: NatWest online transactions PDF is parsed using the running balance
+    Given a NatWest transactions PDF with a £0.10 row whose balance falls from £3,941.54 to £3,941.44
+    When the PDF is uploaded
+    Then 1 transaction is imported with amount_pence -10
+
+  Scenario: NatWest CSV export is imported
+    Given a NatWest CSV export with 102 transactions for account 600513-17924995
+    When the CSV is uploaded
+    Then 102 transactions are imported into the linked account "statement:600513-17924995"
+
+  Scenario: NatWest OFX export is imported
+    Given a NatWest OFX export with 102 transactions
+    When the OFX file is uploaded
+    Then 102 transactions are imported
+
+  Scenario: The same period imported in a second format is not duplicated
+    Given the September PDF statement was already imported
+    When the September CSV export is uploaded
+    Then 0 new transactions are imported

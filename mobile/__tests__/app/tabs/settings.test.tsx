@@ -35,21 +35,21 @@ describe('SettingsScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/goals');
   });
 
-  it('uploads a picked PDF statement to /import/pdf', async () => {
+  it('uploads a picked statement to /import/statement', async () => {
     mockGetDocument.mockResolvedValueOnce({
       canceled: false,
       assets: [{ uri: 'file:///statement.pdf', name: 'statement.pdf' }],
     });
     const { getByLabelText } = render(<SettingsScreen />);
-    fireEvent.press(getByLabelText('Upload statement PDF'));
+    fireEvent.press(getByLabelText('Upload statement'));
     await waitFor(() => {
-      expect(apiUpload).toHaveBeenCalledWith('/import/pdf', expect.any(FormData));
+      expect(apiUpload).toHaveBeenCalledWith('/import/statement', expect.any(FormData));
     });
   });
 
   it('does not upload when the document picker is cancelled', async () => {
     const { getByLabelText } = render(<SettingsScreen />);
-    fireEvent.press(getByLabelText('Upload statement PDF'));
+    fireEvent.press(getByLabelText('Upload statement'));
     await waitFor(() => expect(mockGetDocument).toHaveBeenCalled());
     expect(apiUpload).not.toHaveBeenCalled();
   });

@@ -22,10 +22,10 @@ describe('apiUpload', () => {
     const formData = new FormData();
     formData.append('userId', '00000000-0000-0000-0000-000000000001');
 
-    const result = await apiUpload('/import/pdf', formData);
+    const result = await apiUpload('/import/statement', formData);
 
     const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe('http://localhost:3000/import/pdf');
+    expect(url).toBe('http://localhost:3000/import/statement');
     // Must NOT set Content-Type manually — let fetch set the multipart boundary
     expect((init.headers as Record<string, string> | undefined)?.['Content-Type']).toBeUndefined();
     expect(init.method).toBe('POST');
@@ -41,6 +41,6 @@ describe('apiUpload', () => {
     }) as jest.Mock;
 
     const formData = new FormData();
-    await expect(apiUpload('/import/pdf', formData)).rejects.toThrow('500');
+    await expect(apiUpload('/import/statement', formData)).rejects.toThrow('500');
   });
 });
