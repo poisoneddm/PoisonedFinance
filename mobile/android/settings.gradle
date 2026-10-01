@@ -45,6 +45,14 @@ rootProject.name = 'PoisonedFinance'
 expoAutolinking.useExpoVersionCatalog { catalog ->
   catalog.version('agp', '9.0.1')
   catalog.version('kotlin', '2.4.10')
+  // ExpoRootProjectPlugin eagerly computes a "ksp" version from a hardcoded
+  // Kotlin-version -> KSP-version lookup table that doesn't know about 2.4.10
+  // yet (crashes with NoSuchElementException otherwise). Nothing in this
+  // project's dependency tree actually applies the KSP plugin - confirmed via
+  // grep - so this just needs to exist to short-circuit that lookup; using
+  // the latest real KSP release rather than a placeholder in case anything
+  // unexpected ever reads it.
+  catalog.version('ksp', '2.3.12')
 }
 
 include ':app'
