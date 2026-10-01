@@ -62,6 +62,10 @@ expoAutolinking.useExpoVersionCatalog { catalog ->
   // the latest real KSP release rather than a placeholder in case anything
   // unexpected ever reads it.
   catalog.version('ksp', '2.3.12')
+  // Match whatever NDK is actually installed locally rather than forcing a download of
+  // the catalog's pinned 27.1.12297006. NDK versions aren't tightly coupled to AGP the
+  // way Gradle/AGP are, so any reasonably recent NDK works fine for RN/Expo's native code.
+  catalog.version('ndkVersion', '30.0.16248370')
 }
 
 include ':app'
