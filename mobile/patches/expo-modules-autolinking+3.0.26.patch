@@ -1,0 +1,114 @@
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/build.gradle.kts
+index ced05f1..0d5a7b6 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/build.gradle.kts
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/build.gradle.kts
+@@ -1,4 +1,4 @@
+ plugins {
+-  kotlin("jvm") version "2.1.20" apply false
++  kotlin("jvm") version "2.4.10" apply false
+   id("java-gradle-plugin")
+ }
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/build.gradle.kts
+index 3aca925..c2ed3b3 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/build.gradle.kts
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/build.gradle.kts
+@@ -1,9 +1,10 @@
+ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
++import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+ 
+ plugins {
+   kotlin("jvm")
+-  kotlin("plugin.serialization") version "1.9.24"
++  kotlin("plugin.serialization") version "2.4.10"
+ }
+ 
+ repositories {
+@@ -22,9 +23,9 @@ java {
+   targetCompatibility = JavaVersion.VERSION_11
+ }
+ 
+-tasks.withType<KotlinCompile> {
+-  kotlinOptions {
+-    jvmTarget = JavaVersion.VERSION_11.toString()
++tasks.withType<KotlinCompile>().configureEach {
++  compilerOptions {
++    jvmTarget.set(JvmTarget.JVM_11)
+   }
+ }
+ 
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts
+index cc73c94..0617d67 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/build.gradle.kts
+@@ -1,3 +1,4 @@
++import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+ 
+ plugins {
+@@ -21,9 +22,9 @@ java {
+   targetCompatibility = JavaVersion.VERSION_11
+ }
+ 
+-tasks.withType<KotlinCompile> {
+-  kotlinOptions {
+-    jvmTarget = JavaVersion.VERSION_11.toString()
++tasks.withType<KotlinCompile>().configureEach {
++  compilerOptions {
++    jvmTarget.set(JvmTarget.JVM_11)
+   }
+ }
+ 
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
+index 7a6f1bb..38f0eb1 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
+@@ -29,7 +29,13 @@ open class ExpoAutolinkingPlugin : Plugin<Project> {
+     project.logger.quiet("Using expo modules")
+ 
+     val appProject = findAppProject(project.rootProject)
+-    appProject?.let { copyAppDimensionsAndFlavorsToProject(project, it) }
++    // Uses deprecated BaseExtension flavor APIs that AGP 9 may no longer provide at runtime.
++    // Optional feature (copies app product flavors to modules), so degrade with a warning.
++    try {
++      appProject?.let { copyAppDimensionsAndFlavorsToProject(project, it) }
++    } catch (e: LinkageError) {
++      project.logger.warn("Skipping flavor copy for ${project.path}: ${e.message}")
++    }
+ 
+     val (prebuiltProjects, projects) = config.allProjects.partition { project ->
+       project.usePublication
+@@ -67,7 +73,9 @@ open class ExpoAutolinkingPlugin : Plugin<Project> {
+         .sourceSets
+         .getByName("main")
+         .java
+-        .srcDir(getPackageListDir(project))
++        // AGP 9 rejects Provider instances in the SourceSet API; resolve to a File like
++        // react-native-gradle-plugin does. Task ordering is already explicit via preBuild above.
++        .srcDir(getPackageListDir(project).get().asFile)
+     }
+   }
+ 
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
+index 54db2c4..51f86b3 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
+@@ -1,4 +1,5 @@
+ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
++import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+ 
+ plugins {
+@@ -26,9 +27,9 @@ java {
+   targetCompatibility = JavaVersion.VERSION_11
+ }
+ 
+-tasks.withType<KotlinCompile> {
+-  kotlinOptions {
+-    jvmTarget = JavaVersion.VERSION_11.toString()
++tasks.withType<KotlinCompile>().configureEach {
++  compilerOptions {
++    jvmTarget.set(JvmTarget.JVM_11)
+   }
+ }
+ 

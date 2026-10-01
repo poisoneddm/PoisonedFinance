@@ -1,0 +1,22 @@
+diff --git a/node_modules/react-native-gesture-handler/android/build.gradle b/node_modules/react-native-gesture-handler/android/build.gradle
+index ac149a0..c79e8fe 100644
+--- a/node_modules/react-native-gesture-handler/android/build.gradle
++++ b/node_modules/react-native-gesture-handler/android/build.gradle
+@@ -62,7 +62,7 @@ if (isNewArchitectureEnabled()) {
+ }
+ 
+ apply plugin: 'com.android.library'
+-apply plugin: 'kotlin-android'
++// AGP 9.0+ provides built-in Kotlin support - kotlin-android alongside it is now an error.
+ 
+ if (project == rootProject) {
+     apply from: "spotless.gradle"
+@@ -211,6 +211,8 @@ android {
+                 srcDirs += 'paper/src/main/java'
+             }
+         }
++        // AGP 9 built-in Kotlin only compiles .kt files from kotlin source dirs.
++        java.srcDirs.findAll { it != project.file("src/main/java") }.each { kotlin.srcDir(it) }
+     }
+ 
+     if (isGHExampleApp()) {

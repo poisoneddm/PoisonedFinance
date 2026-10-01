@@ -1,0 +1,78 @@
+diff --git a/node_modules/expo-modules-core/android/build.gradle b/node_modules/expo-modules-core/android/build.gradle
+index 80cee5d..9350732 100644
+--- a/node_modules/expo-modules-core/android/build.gradle
++++ b/node_modules/expo-modules-core/android/build.gradle
+@@ -165,6 +165,8 @@ android {
+           srcDirs += 'src/withoutCompose'
+         }
+       }
++      // AGP 9 built-in Kotlin only compiles .kt files from kotlin source dirs.
++      java.srcDirs.findAll { it != project.file("src/main/java") }.each { kotlin.srcDir(it) }
+     }
+   }
+ 
+diff --git a/node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts b/node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts
+index 9697cea..6b4d1a8 100644
+--- a/node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts
++++ b/node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts
+@@ -1,8 +1,9 @@
+ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
++import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+ 
+ plugins {
+-  kotlin("jvm") version "2.1.20"
++  kotlin("jvm") version "2.4.10"
+   id("java-gradle-plugin")
+ }
+ 
+@@ -54,9 +55,9 @@ java {
+   }
+ }
+ 
+-tasks.withType<KotlinCompile> {
+-  kotlinOptions {
+-    jvmTarget = JavaVersion.VERSION_11.toString()
++tasks.withType<KotlinCompile>().configureEach {
++  compilerOptions {
++    jvmTarget.set(JvmTarget.JVM_11)
+   }
+ }
+ 
+diff --git a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
+index 7c22069..44f619d 100644
+--- a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
++++ b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
+@@ -22,9 +22,9 @@ internal fun Project.applyDefaultPlugins() {
+   if (!plugins.hasPlugin("com.android.library")) {
+     plugins.apply("com.android.library")
+   }
+-  if (!plugins.hasPlugin("kotlin-android")) {
+-    plugins.apply("kotlin-android")
+-  }
++  // AGP 9.0+ provides built-in Kotlin support - applying kotlin-android alongside it is now
++  // a configuration error ("no longer required... remove the plugin"). Same fix already
++  // applied to this project's own android/app/build.gradle.
+   if (!plugins.hasPlugin("maven-publish")) {
+     plugins.apply("maven-publish")
+   }
+diff --git a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
+index 9bfae8d..bb8b799 100644
+--- a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
++++ b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
+@@ -6,12 +6,13 @@ internal fun LibraryExtension.applySDKVersions(compileSdk: Int, minSdk: Int, tar
+   this.compileSdk = compileSdk
+   defaultConfig {
+     this@defaultConfig.minSdk = minSdk
+-    this@defaultConfig.targetSdk = targetSdk
++    // AGP 9 removed targetSdk from the library DSL (NoSuchMethodError at runtime); a
++    // library's targetSdk never affected the final APK anyway.
+   }
+ }
+ 
+ internal fun LibraryExtension.applyLinterOptions() {
+-  lintOptions.isAbortOnError = false
++  lint.abortOnError = false
+ }
+ 
+ internal fun LibraryExtension.applyPublishingVariant() {

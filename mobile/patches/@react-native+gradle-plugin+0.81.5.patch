@@ -1,0 +1,114 @@
+diff --git a/node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml b/node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml
+index 7d5e2ab..78cd775 100644
+--- a/node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml
++++ b/node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml
+@@ -4,7 +4,7 @@ gson = "2.8.9"
+ guava = "31.0.1-jre"
+ javapoet = "1.13.0"
+ junit = "4.13.2"
+-kotlin = "2.1.20"
++kotlin = "2.4.10"
+ assertj = "3.25.1"
+ 
+ [libraries]
+diff --git a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
+index f8e62cb..4c7d0e8 100644
+--- a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
+@@ -63,7 +63,7 @@ kotlin { jvmToolchain(17) }
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_8)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors.set(
+diff --git a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
+index c11d0cc..631f9b3 100644
+--- a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
++++ b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
+@@ -79,8 +79,21 @@ internal object AgpConfiguratorUtils {
+     project.pluginManager.withPlugin("com.android.library", action)
+   }
+ 
++  // Every project applying com.facebook.react re-runs these allprojects loops. Only the first
++  // call (from :app, evaluated before any library) may register: later calls would hit
++  // already-finalized libraries, which AGP 9 rejects ("too late to call finalizeDsl").
++  private fun Project.registerOnce(key: String): Boolean {
++    val extra = extensions.extraProperties
++    if (extra.has(key)) return false
++    extra.set(key, true)
++    return true
++  }
++
+   fun configureBuildConfigFieldsForLibraries(appProject: Project) {
+     appProject.rootProject.allprojects { subproject ->
++      if (!subproject.registerOnce("react.internal.buildConfigForLibrariesRegistered")) {
++        return@allprojects
++      }
+       subproject.pluginManager.withPlugin("com.android.library") {
+         subproject.extensions
+             .getByType(LibraryAndroidComponentsExtension::class.java)
+@@ -110,6 +123,9 @@ internal object AgpConfiguratorUtils {
+ 
+   fun configureNamespaceForLibraries(appProject: Project) {
+     appProject.rootProject.allprojects { subproject ->
++      if (!subproject.registerOnce("react.internal.namespaceForLibrariesRegistered")) {
++        return@allprojects
++      }
+       subproject.pluginManager.withPlugin("com.android.library") {
+         subproject.extensions
+             .getByType(LibraryAndroidComponentsExtension::class.java)
+diff --git a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
+index bd11ca6..f450ae9 100644
+--- a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
+@@ -53,7 +53,7 @@ kotlin { jvmToolchain(17) }
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_8)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors.set(
+diff --git a/node_modules/@react-native/gradle-plugin/settings.gradle.kts b/node_modules/@react-native/gradle-plugin/settings.gradle.kts
+index b3c46a3..14f1e9c 100644
+--- a/node_modules/@react-native/gradle-plugin/settings.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/settings.gradle.kts
+@@ -13,7 +13,7 @@ pluginManagement {
+   }
+ }
+ 
+-plugins { id("org.gradle.toolchains.foojay-resolver-convention").version("0.5.0") }
++plugins { id("org.gradle.toolchains.foojay-resolver-convention").version("1.0.0") }
+ 
+ include(
+     ":react-native-gradle-plugin",
+diff --git a/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts b/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
+index 4c1a1ec..5f5b584 100644
+--- a/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
+@@ -24,7 +24,7 @@ kotlin { jvmToolchain(17) }
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_8)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors.set(
+diff --git a/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts b/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
+index 5a74b56..d863905 100644
+--- a/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
++++ b/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
+@@ -30,7 +30,7 @@ kotlin { jvmToolchain(17) }
+ 
+ tasks.withType<KotlinCompile>().configureEach {
+   compilerOptions {
+-    apiVersion.set(KotlinVersion.KOTLIN_1_8)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
+     // See comment above on JDK 11 support
+     jvmTarget.set(JvmTarget.JVM_11)
+     allWarningsAsErrors.set(

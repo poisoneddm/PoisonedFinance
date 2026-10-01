@@ -1,6 +1,6 @@
 # PoisonedFinance
 
-Personal finance app that imports UK bank transactions from PDF statements, auto-categorising them with AI (Groq / Llama 3.3), and tracking spending against a 40/20/40 Needs/Wants/Savings budget.
+Personal finance app that imports UK bank transactions from bank statements (PDF, CSV or OFX), auto-categorising them with AI (Groq / Llama 3.3), and tracking spending against a 40/20/40 Needs/Wants/Savings budget.
 
 ---
 

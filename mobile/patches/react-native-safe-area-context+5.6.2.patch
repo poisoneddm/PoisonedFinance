@@ -1,0 +1,22 @@
+diff --git a/node_modules/react-native-safe-area-context/android/build.gradle b/node_modules/react-native-safe-area-context/android/build.gradle
+index f324b9a..0151dc5 100644
+--- a/node_modules/react-native-safe-area-context/android/build.gradle
++++ b/node_modules/react-native-safe-area-context/android/build.gradle
+@@ -32,7 +32,7 @@ def isNewArchitectureEnabled() {
+ }
+ 
+ apply plugin: 'com.android.library'
+-apply plugin: 'kotlin-android'
++// AGP 9.0+ provides built-in Kotlin support - kotlin-android alongside it is now an error.
+ 
+ if (isNewArchitectureEnabled()) {
+     apply plugin: "com.facebook.react"
+@@ -94,6 +94,8 @@ android {
+                 ]
+             }
+         }
++        // AGP 9 built-in Kotlin only compiles .kt files from kotlin source dirs.
++        java.srcDirs.findAll { it != project.file("src/main/java") }.each { kotlin.srcDir(it) }
+     }
+ }
+ 

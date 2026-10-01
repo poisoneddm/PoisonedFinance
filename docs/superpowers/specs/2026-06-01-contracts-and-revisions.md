@@ -179,7 +179,7 @@ Badge per tier (compare tier monthly vs `goal_pence`):
 | GET | `/auth/truelayer?userId=` | redirect to consent |
 | GET | `/auth/callback` | store connection + initial sync |
 | POST | `/sync/:userId` | manual full sync |
-| POST | `/import/pdf` (multipart, field `file`, `userId`) | PDF statement fallback |
+| POST | `/import/statement` (multipart, field `file`, `userId`) | statement import (PDF, CSV or OFX; format detected from content) |
 | GET | `/dashboard/:userId?year=&month=` | income, pills, review count, recent txns |
 | GET | `/spending/:userId?year=&month=` | 3 goal bars + category breakdown |
 | GET | `/transactions/:userId?year=&month=&account=&bucket=&q=` | filtered list |
@@ -233,7 +233,7 @@ Initial sync pulls **180 days** (forecast/trends need ≥ 6 months). Subsequent 
   ```
   features/
     categorisation/   rules-engine.feature  ai-fallback.feature  review-and-rules.feature
-    sync/             truelayer-oauth.feature  transaction-sync.feature  pdf-import.feature
+    sync/             truelayer-oauth.feature  transaction-sync.feature  statement-import.feature
     budgeting/        spending-buckets.feature  dashboard-pills.feature  goal-config.feature
     forecast/         savings-forecast.feature  spending-trends.feature
   ```

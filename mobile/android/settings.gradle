@@ -1,0 +1,72 @@
+pluginManagement {
+  def reactNativeGradlePlugin = new File(
+    providers.exec {
+      workingDir(rootDir)
+      commandLine("node", "--print", "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })")
+    }.standardOutput.asText.get().trim()
+  ).getParentFile().absolutePath
+  includeBuild(reactNativeGradlePlugin)
+  
+  def expoPluginsPath = new File(
+    providers.exec {
+      workingDir(rootDir)
+      commandLine("node", "--print", "require.resolve('expo-modules-autolinking/package.json', { paths: [require.resolve('expo/package.json')] })")
+    }.standardOutput.asText.get().trim(),
+    "../android/expo-gradle-plugin"
+  ).absolutePath
+  includeBuild(expoPluginsPath)
+}
+
+plugins {
+  id("com.facebook.react.settings")
+  id("expo-autolinking-settings")
+}
+
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
+    ex.autolinkLibrariesFromCommand()
+  } else {
+    ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
+  }
+}
+expoAutolinking.useExpoModules()
+
+rootProject.name = 'PoisonedFinance'
+
+// react-native@0.81.5's bundled catalog pins AGP 8.11.0 and Kotlin 2.1.20, which predate
+// Gradle 9 support (AGP 8.x does not support Gradle 9.x at all). AGP 9.0 also takes over
+// Kotlin support directly and requires KGP >= 2.2.10 - but Gradle 9.8.0 itself bundles
+// kotlin-stdlib/kotlin-reflect 2.4.10 on the plugin classpath, and a compiler older than
+// that can't read that metadata version ("Unsupported... Module was compiled with an
+// incompatible version of Kotlin"), so pin 2.4.10 to match Gradle's own bundled runtime
+// exactly, confirmed against the two vendored included builds that needed the same bump
+// (see mobile/patches/).
+//
+// AGP itself went through several 9.x point releases before catching up to Gradle 9.8.0:
+// AGP 9.0.1 applies :app via 'com.android.internal.application', which calls
+// org.gradle.api.problems.internal.InternalProblems - a Gradle-internal API Gradle removed
+// in 9.6.0 ("Update the plugin to a version that no longer uses Gradle internal APIs").
+// Each AGP 9.x release's own documented minimum Gradle version climbed in lockstep with
+// Gradle's release cadence (9.0.1->9.1.0, 9.1.1->9.3.1, 9.2.0->9.4.1, 9.3.0->9.5.0), and
+// 9.4.0 is the first one whose own floor reaches 9.6.0 - strong evidence it's also the
+// first one actually updated to stop touching that now-removed API. Confirmed via Android's
+// own AGP 9.4.0 release notes (Gradle min/default 9.6.0, JDK 17 min) before pinning here.
+expoAutolinking.useExpoVersionCatalog { catalog ->
+  catalog.version('agp', '9.4.0')
+  catalog.version('kotlin', '2.4.10')
+  // ExpoRootProjectPlugin eagerly computes a "ksp" version from a hardcoded
+  // Kotlin-version -> KSP-version lookup table that doesn't know about 2.4.10
+  // yet (crashes with NoSuchElementException otherwise). Nothing in this
+  // project's dependency tree actually applies the KSP plugin - confirmed via
+  // grep - so this just needs to exist to short-circuit that lookup; using
+  // the latest real KSP release rather than a placeholder in case anything
+  // unexpected ever reads it.
+  catalog.version('ksp', '2.3.12')
+  // Match whatever NDK is actually installed locally rather than forcing a download of
+  // the catalog's pinned 27.1.12297006. NDK versions aren't tightly coupled to AGP the
+  // way Gradle/AGP are, so any reasonably recent NDK works fine for RN/Expo's native code.
+  catalog.version('ndkVersion', '30.0.16248370')
+}
+
+include ':app'
+includeBuild(expoAutolinking.reactNativeGradlePlugin)
