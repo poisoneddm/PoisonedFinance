@@ -27,21 +27,10 @@ index 9697cea..6b4d1a8 100644
  }
  
 diff --git a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
-index 7c22069..b78b112 100644
+index 7c22069..44f619d 100644
 --- a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
 +++ b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/ProjectConfiguration.kt
-@@ -2,7 +2,9 @@
- 
- package expo.modules.plugin
- 
--import com.android.build.gradle.LibraryExtension
-+// AGP 9 no longer registers the old com.android.build.gradle.LibraryExtension type via
-+// getByType - use the modern DSL interface package instead.
-+import com.android.build.api.dsl.LibraryExtension
- import expo.modules.plugin.android.PublicationInfo
- import expo.modules.plugin.android.applyLinterOptions
- import expo.modules.plugin.android.applyPublishingVariant
-@@ -22,9 +24,9 @@ internal fun Project.applyDefaultPlugins() {
+@@ -22,9 +22,9 @@ internal fun Project.applyDefaultPlugins() {
    if (!plugins.hasPlugin("com.android.library")) {
      plugins.apply("com.android.library")
    }
@@ -54,18 +43,3 @@ index 7c22069..b78b112 100644
    if (!plugins.hasPlugin("maven-publish")) {
      plugins.apply("maven-publish")
    }
-diff --git a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
-index 9bfae8d..20f99f3 100644
---- a/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
-+++ b/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt
-@@ -1,6 +1,9 @@
- package expo.modules.plugin.android
- 
--import com.android.build.gradle.LibraryExtension
-+// AGP 9 no longer registers the old com.android.build.gradle.LibraryExtension type via
-+// getByType - use the modern DSL interface package instead, which the registered
-+// LibraryExtensionImpl implements.
-+import com.android.build.api.dsl.LibraryExtension
- 
- internal fun LibraryExtension.applySDKVersions(compileSdk: Int, minSdk: Int, targetSdk: Int) {
-   this.compileSdk = compileSdk

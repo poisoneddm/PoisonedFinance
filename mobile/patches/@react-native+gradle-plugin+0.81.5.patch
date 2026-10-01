@@ -24,32 +24,6 @@ index f8e62cb..4c7d0e8 100644
      // See comment above on JDK 11 support
      jvmTarget.set(JvmTarget.JVM_11)
      allWarningsAsErrors.set(
-diff --git a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
-index c11d0cc..84e6a5f 100644
---- a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
-+++ b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
-@@ -9,7 +9,6 @@ package com.facebook.react.utils
- 
- import com.android.build.api.variant.ApplicationAndroidComponentsExtension
- import com.android.build.api.variant.LibraryAndroidComponentsExtension
--import com.android.build.gradle.LibraryExtension
- import com.facebook.react.ReactExtension
- import com.facebook.react.utils.ProjectUtils.isEdgeToEdgeEnabled
- import com.facebook.react.utils.ProjectUtils.isHermesEnabled
-@@ -115,8 +114,11 @@ internal object AgpConfiguratorUtils {
-             .getByType(LibraryAndroidComponentsExtension::class.java)
-             .finalizeDsl { ext ->
-               if (ext.namespace == null) {
--                val android = subproject.extensions.getByType(LibraryExtension::class.java)
--                val manifestFile = android.sourceSets.getByName("main").manifest.srcFile
-+                // AGP 9's extension registration no longer exposes the old
-+                // com.android.build.gradle.LibraryExtension type via getByType - use the
-+                // LibraryAndroidComponentsExtension DSL object already in scope instead,
-+                // which exposes the same sourceSets surface.
-+                val manifestFile = ext.sourceSets.getByName("main").manifest.srcFile
- 
-                 manifestFile
-                     .takeIf { it.exists() }
 diff --git a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
 index bd11ca6..f450ae9 100644
 --- a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
