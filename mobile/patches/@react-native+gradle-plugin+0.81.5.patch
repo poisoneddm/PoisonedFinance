@@ -24,6 +24,42 @@ index f8e62cb..4c7d0e8 100644
      // See comment above on JDK 11 support
      jvmTarget.set(JvmTarget.JVM_11)
      allWarningsAsErrors.set(
+diff --git a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
+index c11d0cc..631f9b3 100644
+--- a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
++++ b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/src/main/kotlin/com/facebook/react/utils/AgpConfiguratorUtils.kt
+@@ -79,8 +79,21 @@ internal object AgpConfiguratorUtils {
+     project.pluginManager.withPlugin("com.android.library", action)
+   }
+ 
++  // Every project applying com.facebook.react re-runs these allprojects loops. Only the first
++  // call (from :app, evaluated before any library) may register: later calls would hit
++  // already-finalized libraries, which AGP 9 rejects ("too late to call finalizeDsl").
++  private fun Project.registerOnce(key: String): Boolean {
++    val extra = extensions.extraProperties
++    if (extra.has(key)) return false
++    extra.set(key, true)
++    return true
++  }
++
+   fun configureBuildConfigFieldsForLibraries(appProject: Project) {
+     appProject.rootProject.allprojects { subproject ->
++      if (!subproject.registerOnce("react.internal.buildConfigForLibrariesRegistered")) {
++        return@allprojects
++      }
+       subproject.pluginManager.withPlugin("com.android.library") {
+         subproject.extensions
+             .getByType(LibraryAndroidComponentsExtension::class.java)
+@@ -110,6 +123,9 @@ internal object AgpConfiguratorUtils {
+ 
+   fun configureNamespaceForLibraries(appProject: Project) {
+     appProject.rootProject.allprojects { subproject ->
++      if (!subproject.registerOnce("react.internal.namespaceForLibrariesRegistered")) {
++        return@allprojects
++      }
+       subproject.pluginManager.withPlugin("com.android.library") {
+         subproject.extensions
+             .getByType(LibraryAndroidComponentsExtension::class.java)
 diff --git a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
 index bd11ca6..f450ae9 100644
 --- a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
