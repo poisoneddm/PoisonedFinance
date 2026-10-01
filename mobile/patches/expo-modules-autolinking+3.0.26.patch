@@ -59,6 +59,25 @@ index cc73c94..0617d67 100644
    }
  }
  
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
+index 7a6f1bb..8b981a2 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
+@@ -29,7 +29,13 @@ open class ExpoAutolinkingPlugin : Plugin<Project> {
+     project.logger.quiet("Using expo modules")
+ 
+     val appProject = findAppProject(project.rootProject)
+-    appProject?.let { copyAppDimensionsAndFlavorsToProject(project, it) }
++    // Uses deprecated BaseExtension flavor APIs that AGP 9 may no longer provide at runtime.
++    // Optional feature (copies app product flavors to modules), so degrade with a warning.
++    try {
++      appProject?.let { copyAppDimensionsAndFlavorsToProject(project, it) }
++    } catch (e: LinkageError) {
++      project.logger.warn("Skipping flavor copy for ${project.path}: ${e.message}")
++    }
+ 
+     val (prebuiltProjects, projects) = config.allProjects.partition { project ->
+       project.usePublication
 diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
 index 54db2c4..51f86b3 100644
 --- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
