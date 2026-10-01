@@ -60,7 +60,7 @@ index cc73c94..0617d67 100644
  }
  
 diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
-index 7a6f1bb..8b981a2 100644
+index 7a6f1bb..38f0eb1 100644
 --- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
 +++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingPlugin.kt
 @@ -29,7 +29,13 @@ open class ExpoAutolinkingPlugin : Plugin<Project> {
@@ -78,6 +78,17 @@ index 7a6f1bb..8b981a2 100644
  
      val (prebuiltProjects, projects) = config.allProjects.partition { project ->
        project.usePublication
+@@ -67,7 +73,9 @@ open class ExpoAutolinkingPlugin : Plugin<Project> {
+         .sourceSets
+         .getByName("main")
+         .java
+-        .srcDir(getPackageListDir(project))
++        // AGP 9 rejects Provider instances in the SourceSet API; resolve to a File like
++        // react-native-gradle-plugin does. Task ordering is already explicit via preBuild above.
++        .srcDir(getPackageListDir(project).get().asFile)
+     }
+   }
+ 
 diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
 index 54db2c4..51f86b3 100644
 --- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/build.gradle.kts
