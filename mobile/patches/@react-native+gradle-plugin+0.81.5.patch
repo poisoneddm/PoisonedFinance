@@ -12,7 +12,7 @@ index 7d5e2ab..78cd775 100644
  
  [libraries]
 diff --git a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
-index f8e62cb..b97c424 100644
+index f8e62cb..4c7d0e8 100644
 --- a/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
 +++ b/node_modules/@react-native/gradle-plugin/react-native-gradle-plugin/build.gradle.kts
 @@ -63,7 +63,7 @@ kotlin { jvmToolchain(17) }
@@ -20,12 +20,12 @@ index f8e62cb..b97c424 100644
  tasks.withType<KotlinCompile>().configureEach {
    compilerOptions {
 -    apiVersion.set(KotlinVersion.KOTLIN_1_8)
-+    apiVersion.set(KotlinVersion.KOTLIN_2_0)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
      // See comment above on JDK 11 support
      jvmTarget.set(JvmTarget.JVM_11)
      allWarningsAsErrors.set(
 diff --git a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
-index bd11ca6..c105678 100644
+index bd11ca6..f450ae9 100644
 --- a/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
 +++ b/node_modules/@react-native/gradle-plugin/settings-plugin/build.gradle.kts
 @@ -53,7 +53,7 @@ kotlin { jvmToolchain(17) }
@@ -33,7 +33,7 @@ index bd11ca6..c105678 100644
  tasks.withType<KotlinCompile>().configureEach {
    compilerOptions {
 -    apiVersion.set(KotlinVersion.KOTLIN_1_8)
-+    apiVersion.set(KotlinVersion.KOTLIN_2_0)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
      // See comment above on JDK 11 support
      jvmTarget.set(JvmTarget.JVM_11)
      allWarningsAsErrors.set(
@@ -51,7 +51,7 @@ index b3c46a3..14f1e9c 100644
  include(
      ":react-native-gradle-plugin",
 diff --git a/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts b/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
-index 4c1a1ec..91deda4 100644
+index 4c1a1ec..5f5b584 100644
 --- a/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
 +++ b/node_modules/@react-native/gradle-plugin/shared-testutil/build.gradle.kts
 @@ -24,7 +24,7 @@ kotlin { jvmToolchain(17) }
@@ -59,12 +59,12 @@ index 4c1a1ec..91deda4 100644
  tasks.withType<KotlinCompile>().configureEach {
    compilerOptions {
 -    apiVersion.set(KotlinVersion.KOTLIN_1_8)
-+    apiVersion.set(KotlinVersion.KOTLIN_2_0)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
      // See comment above on JDK 11 support
      jvmTarget.set(JvmTarget.JVM_11)
      allWarningsAsErrors.set(
 diff --git a/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts b/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
-index 5a74b56..e88e494 100644
+index 5a74b56..d863905 100644
 --- a/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
 +++ b/node_modules/@react-native/gradle-plugin/shared/build.gradle.kts
 @@ -30,7 +30,7 @@ kotlin { jvmToolchain(17) }
@@ -72,7 +72,7 @@ index 5a74b56..e88e494 100644
  tasks.withType<KotlinCompile>().configureEach {
    compilerOptions {
 -    apiVersion.set(KotlinVersion.KOTLIN_1_8)
-+    apiVersion.set(KotlinVersion.KOTLIN_2_0)
++    apiVersion.set(KotlinVersion.KOTLIN_2_2)
      // See comment above on JDK 11 support
      jvmTarget.set(JvmTarget.JVM_11)
      allWarningsAsErrors.set(
