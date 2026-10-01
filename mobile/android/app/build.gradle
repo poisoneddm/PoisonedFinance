@@ -86,6 +86,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    // AGP 9 disabled this build feature by default (used to be on). The react-native
+    // Gradle plugin's own AgpConfiguratorUtils.kt programmatically injects a resValue
+    // into defaultConfig, which fails without this re-enabled.
+    buildFeatures {
+        resValues true
+    }
+
     namespace 'com.poisoneddm.poisonedfinance'
     defaultConfig {
         applicationId 'com.poisoneddm.poisonedfinance'
