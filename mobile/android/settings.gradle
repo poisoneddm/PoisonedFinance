@@ -36,11 +36,15 @@ rootProject.name = 'PoisonedFinance'
 // react-native@0.81.5's bundled catalog pins AGP 8.11.0 and Kotlin 2.1.20, which predate
 // Gradle 9 support (AGP 8.x does not support Gradle 9.x at all; AGP 9.0.1 is the earliest
 // AGP 9.x release, requiring Gradle >= 9.1.0, which our 9.8.0 wrapper satisfies). AGP 9.0
-// also takes over Kotlin support directly and requires KGP >= 2.2.10, so pin that too
-// instead of relying on AGP's documented auto-upgrade-on-mismatch behavior.
+// also takes over Kotlin support directly and requires KGP >= 2.2.10 - but Gradle 9.8.0
+// itself bundles kotlin-stdlib/kotlin-reflect 2.4.10 on the plugin classpath, and a
+// compiler older than that can't read that metadata version ("Unsupported... Module was
+// compiled with an incompatible version of Kotlin"), so pin 2.4.10 to match Gradle's own
+// bundled runtime exactly, confirmed against the two vendored included builds that needed
+// the same bump (see mobile/patches/).
 expoAutolinking.useExpoVersionCatalog { catalog ->
   catalog.version('agp', '9.0.1')
-  catalog.version('kotlin', '2.2.10')
+  catalog.version('kotlin', '2.4.10')
 }
 
 include ':app'
