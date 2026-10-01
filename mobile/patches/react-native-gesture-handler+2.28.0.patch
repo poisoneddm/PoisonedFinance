@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-gesture-handler/android/build.gradle b/node_modules/react-native-gesture-handler/android/build.gradle
-index ac149a0..c4e69dd 100644
+index ac149a0..c79e8fe 100644
 --- a/node_modules/react-native-gesture-handler/android/build.gradle
 +++ b/node_modules/react-native-gesture-handler/android/build.gradle
 @@ -62,7 +62,7 @@ if (isNewArchitectureEnabled()) {
@@ -11,3 +11,12 @@ index ac149a0..c4e69dd 100644
  
  if (project == rootProject) {
      apply from: "spotless.gradle"
+@@ -211,6 +211,8 @@ android {
+                 srcDirs += 'paper/src/main/java'
+             }
+         }
++        // AGP 9 built-in Kotlin only compiles .kt files from kotlin source dirs.
++        java.srcDirs.findAll { it != project.file("src/main/java") }.each { kotlin.srcDir(it) }
+     }
+ 
+     if (isGHExampleApp()) {

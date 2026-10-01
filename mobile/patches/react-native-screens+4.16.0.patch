@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-screens/android/build.gradle b/node_modules/react-native-screens/android/build.gradle
-index 114be81..d27a615 100644
+index 114be81..ee5d5ee 100644
 --- a/node_modules/react-native-screens/android/build.gradle
 +++ b/node_modules/react-native-screens/android/build.gradle
 @@ -90,7 +90,7 @@ if (isNewArchitectureEnabled()) {
@@ -11,3 +11,12 @@ index 114be81..d27a615 100644
  
  def reactNativeArchitectures() {
      def value = project.getProperties().get("reactNativeArchitectures")
+@@ -217,6 +217,8 @@ android {
+                 srcDirs += "src/versioned/edge-to-edge/latest"
+             }
+         }
++        // AGP 9 built-in Kotlin only compiles .kt files from kotlin source dirs.
++        java.srcDirs.findAll { it != project.file("src/main/java") }.each { kotlin.srcDir(it) }
+         res {
+             if (safeExtGet(['compileSdkVersion', 'compileSdk'], rnsDefaultCompileSdkVersion) >= 33) {
+                 srcDirs = ["${androidResDir}/base", "${androidResDir}/v33"]

@@ -1,3 +1,16 @@
+diff --git a/node_modules/expo-modules-core/android/build.gradle b/node_modules/expo-modules-core/android/build.gradle
+index 80cee5d..9350732 100644
+--- a/node_modules/expo-modules-core/android/build.gradle
++++ b/node_modules/expo-modules-core/android/build.gradle
+@@ -165,6 +165,8 @@ android {
+           srcDirs += 'src/withoutCompose'
+         }
+       }
++      // AGP 9 built-in Kotlin only compiles .kt files from kotlin source dirs.
++      java.srcDirs.findAll { it != project.file("src/main/java") }.each { kotlin.srcDir(it) }
+     }
+   }
+ 
 diff --git a/node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts b/node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts
 index 9697cea..6b4d1a8 100644
 --- a/node_modules/expo-modules-core/expo-module-gradle-plugin/build.gradle.kts
