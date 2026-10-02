@@ -48,7 +48,7 @@ function parseCsvRows(text: string): string[][] {
 
 // NatWest export columns: Date, Type, Description, Value, Balance, Account Name, Account Number
 export function parseCsv(text: string): ParsedStatement {
-  const rows = parseCsvRows(text.replace(/^﻿/, ''));
+  const rows = parseCsvRows(text.replace(/^\uFEFF/, ''));
   const headerIndex = rows.findIndex(r => r.some(f => f.trim().toLowerCase() === 'date'));
   if (headerIndex === -1) return { account: null, transactions: [] };
 
