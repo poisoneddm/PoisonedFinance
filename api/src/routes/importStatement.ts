@@ -39,9 +39,9 @@ type StatementFormat = 'pdf' | 'ofx' | 'csv';
 // Detect by content: phones report CSV/OFX mime types inconsistently.
 function detectFormat(buffer: Buffer, filename: string): StatementFormat | null {
   if (buffer.subarray(0, 5).toString('latin1') === '%PDF-') return 'pdf';
-  const head = buffer.subarray(0, 4096).toString('latin1');
+  const head = buffer.subarray(0, 4096).toString('utf8');
   if (/OFXHEADER|<OFX>/i.test(head)) return 'ofx';
-  if (/\.csv$/i.test(filename) || /^﻿?"?date"?\s*,/im.test(head)) return 'csv';
+  if (/\.csv$/i.test(filename) || /^\uFEFF?"?date"?\s*,/im.test(head)) return 'csv';
   return null;
 }
 

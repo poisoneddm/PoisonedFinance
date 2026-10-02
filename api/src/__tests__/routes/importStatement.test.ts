@@ -71,6 +71,16 @@ describe('POST /import/statement', () => {
     expect(mockPdfParse).not.toHaveBeenCalled();
   });
 
+  it('detects a BOM-prefixed CSV without a .csv extension', async () => {
+    mockImportStatement.mockResolvedValueOnce(1);
+    const csv = '\uFEFFDate,Description,Value\n12 Mar 2026,TESCO STORES 3471,-45.67\n';
+
+    const res = await upload(Buffer.from(csv, 'utf8'), 'export');
+
+    expect(res.status).toBe(200);
+    expect(mockImportStatement).toHaveBeenCalledWith(SEED_USER_ID, { account: null, transactions: [TXN] });
+  });
+
   it('imports an OFX statement', async () => {
     mockImportStatement.mockResolvedValueOnce(1);
     const ofx = 'OFXHEADER:100\n<OFX><STMTTRN><DTPOSTED>20260312<TRNAMT>-45.67<NAME>TESCO STORES 3471</STMTTRN></OFX>';
